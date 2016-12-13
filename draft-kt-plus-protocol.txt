@@ -1,0 +1,504 @@
+
+
+
+
+Network Working Group                                        B. Trammell
+Internet-Draft                                             M. Kuehlewind
+Intended status: Experimental                                 ETH Zurich
+Expires: June 16, 2017                                 December 13, 2016
+
+
+            Path Layer UDP Substrate Protocol Specification
+                       draft-kt-plus-protocol-00
+
+Abstract
+
+   This document specifies a Path Layer UDP Substrate (PLUS) protocol
+   for providing a common wire image for encrypted transport protocols
+   carried over UDP.  The base PLUS header carries information for
+   driving a minimal state machine at middleboxes described in
+   [I-D.trammell-plus-statefulness], and provides optional exposure of
+   additional information to devices along the path using the mechanism
+   described in [I-D.trammell-plus-abstract-mech].
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on June 16, 2017.
+
+Copyright Notice
+
+   Copyright (c) 2016 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 1]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   2
+   3.  Base Header . . . . . . . . . . . . . . . . . . . . . . . . .   2
+     3.1.  Measurement and Diagnosis using the Basic Header  . . . .   4
+     3.2.  On-Path State Maintenance using the Basic Header  . . . .   4
+     3.3.  Bidirectional Stop Signaling  . . . . . . . . . . . . . .   4
+   4.  Path Communication Field  . . . . . . . . . . . . . . . . . .   5
+     4.1.  Path to Receiver signals  . . . . . . . . . . . . . . . .   5
+     4.2.  Sender to Path signals  . . . . . . . . . . . . . . . . .   6
+   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   7
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .   7
+   7.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .   7
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   7
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . .   7
+     8.2.  Informative References  . . . . . . . . . . . . . . . . .   8
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   8
+
+1.  Introduction
+
+   [EDITOR'S NOTE: three paragraphs on why we care, refer to path-
+   signals, statefulness, abstract-mech. note intention to co-evolve
+   with plus and connection id work.]
+
+2.  Terminology
+
+   [EDITOR'S NOTE: do we need this? 2119 language?]
+
+3.  Base Header
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 2]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+     3                   2                   1
+   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+   +--------------------------------------------------------------+
+   |       UDP source port        |      UDP destination port     |
+   +--------------------------------------------------------------+
+   |       UDP length             |      UDP checksum             |
+   +--------------------------------------------------------------+
+   |                      magic / version                         |
+   +--------------------------------------------------------------+
+   |                 connection identifier CID                    |
+   +--------------------------------------------------------------+
+   |                 packet serial number  PSN                    |
+   +--------------------------------------------------------------+
+   |                 packet serial echo    PSE                    |
+   +---+-+--------+-----------------------------------------------+
+   |PCL|S|ignored |                                               |
+   +---+-+--------+  path communication field  PCF (optional)    -+
+   |                                                              |
+   +--------------------------------------------------------------+
+   /                                                              \
+   \         transport protocol header/payload (encrypted)        /
+   \                                                              \
+
+                           Figure 1: PLUS header
+
+   [EDITOR'S NOTE: prosify the following]
+
+   The PLUS header appears on each packet.  It has the following fields:
+
+   o  magic: "compatible" with QUIC version number, must have non-
+      reflectable property identified in SPUD.
+
+   o  CID: refer to Connection ID design team output for DTLS/QUIC
+
+   o  PSN: initial chosen randomly, increments by one for each packet
+      sent, including control-only packets and retransmissions.
+
+   o  PSE: highest PSN seen when packet sent, for RTT and state
+      establishment
+
+   o  PCL: path control length code: 00 = not present; 01 = 3 byte; 10 =
+      7 byte; 11 = reserved.
+
+   o  S: bidirectional stop, see Section 3.3
+
+   o  ignored flags: reserved for use by overlying transport protocol
+
+   o  PCF: see definition in Section 4
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 3]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+3.1.  Measurement and Diagnosis using the Basic Header
+
+   [EDITOR'S NOTE: explain how to measure RTT and loss using CID/PSN/
+   PSE]
+
+3.2.  On-Path State Maintenance using the Basic Header
+
+   [EDITOR'S NOTE: note rough TCP-equivalence of this state machine...]
+
+ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
+
+       .- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -.
+       '    +==============+    pkt(s->d)    +==========+              '
+       '   //              \\-------------->/            \--+          '
+       '  ((      zero      ))             (    uniflow   ) |pkt(s->d) '
+       '   \\              //<--------------\            /<-+          '
+       '    +==============+  TO_IDLE/close  +==========+              '
+       '- - -|- - -  ^ - ^  - - - - - - - - - - - - - -|- - - - - - - -'
+             |        \   \                            |  association
+  TO_CLOSING |         \   \                           V  signal
+       +==========+     \   \      TO_IDLE        +==========+
+      /            \     \   +-------------------/            \--+
+     (    closing   )     \                     (  associating ) | pkt
+      \            /       \                     \            /<-+(s->d)
+       +==========+         \ TO_ASSOCIATED       +==========+
+             ^               \                         |
+             |               +==========+              |
+      close  |              /            \             |  confirmation
+     signal  |             (  associated  )            |  signal
+             +--------------\            /<------------+
+                             +==========+
+                               |      ^
+                               +------+
+                              pkt(s<->d)
+
+
+    Figure 2: Signals PLUS provides to the transport-independent state
+                                  machine
+
+3.3.  Bidirectional Stop Signaling
+
+   [EDITOR'S NOTE: describe bidirectional stop signaling and explain why
+   it works.]
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 4]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+4.  Path Communication Field
+
+     3                   2                   1
+   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+                  +-+-+---+-------+-------------------------------+
+                  |L|R|DIR| type  |          value                |
+                  +-+-+---+-------+-------------------------------+
+
+            Figure 3: Path Communication Field: 3-byte variant
+
+     3                   2                   1
+   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+                  +-+-+-+-+-------+-------------------------------+
+                  |L|R|X|D| type  |          value                |
+   +--------------+-+-+-+-+-------+                               |
+   |                                                              |
+   +--------------------------------------------------------------+
+
+            Figure 4: Path Communication Field: 7-byte variant
+
+   o  flag L: if set, packet is latency sensitive and prefers drop to
+      delay
+
+   o  flag R: if set, packet is not sensitive to reordering, and may be
+      freely reordered [EDITOR'S NOTE: how does this ]
+
+   o  codepoint DIR: 0 = path to receiver (presence integrity-
+      protected), 1 = sender to path (integrity-protected).
+
+   o  type: information type associated with value
+
+   o  value: 2 or 6 bytes of value, to be interpreted/filled according
+      to type
+
+4.1.  Path to Receiver signals
+
+   o  0x00: reserved
+
+   o  0x01: reserved
+
+   o  0x02: reserved
+
+   o  0x03: reserved
+
+   o  0x04: reserved
+
+   o  0x05: reserved
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 5]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+   o  0x06: reserved
+
+   o  0x07: reserved
+
+   o  0x08: reserved
+
+   o  0x09: reserved
+
+   o  0x0a: reserved
+
+   o  0x0b: reserved
+
+   o  0x0c: reserved
+
+   o  0x0d: reserved
+
+   o  0x0e: reserved
+
+   o  0x0f: reserved
+
+4.2.  Sender to Path signals
+
+   o  0x10: reserved
+
+   o  0x11: reserved
+
+   o  0x12: reserved
+
+   o  0x13: reserved
+
+   o  0x14: reserved
+
+   o  0x15: reserved
+
+   o  0x16: reserved
+
+   o  0x17: reserved
+
+   o  0x18: reserved
+
+   o  0x19: reserved
+
+   o  0x1a: reserved
+
+   o  0x1b: reserved
+
+   o  0x1c: reserved
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 6]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+   o  0x1d: reserved
+
+   o  0x1e: reserved
+
+   o  0x1f: reserved
+
+5.  IANA Considerations
+
+   This document has no actions for IANA.  Signal types may be moved to
+   a Standards Action registry in the future.
+
+6.  Security Considerations
+
+   [EDITOR'S NOTE: write me]
+
+7.  Acknowledgments
+
+   This work is partially supported by the European Commission under
+   Horizon 2020 grant agreement no. 688421 Measurement and Architecture
+   for a Middleboxed Internet (MAMI), and by the Swiss State Secretariat
+   for Education, Research, and Innovation under contract no. 15.0268.
+   This support does not imply endorsement.
+
+8.  References
+
+8.1.  Normative References
+
+   [RFC5103]  Trammell, B. and E. Boschi, "Bidirectional Flow Export
+              Using IP Flow Information Export (IPFIX)", RFC 5103,
+              DOI 10.17487/RFC5103, January 2008,
+              <http://www.rfc-editor.org/info/rfc5103>.
+
+   [RFC7011]  Claise, B., Ed., Trammell, B., Ed., and P. Aitken,
+              "Specification of the IP Flow Information Export (IPFIX)
+              Protocol for the Exchange of Flow Information", STD 77,
+              RFC 7011, DOI 10.17487/RFC7011, September 2013,
+              <http://www.rfc-editor.org/info/rfc7011>.
+
+   [RFC7398]  Bagnulo, M., Burbridge, T., Crawford, S., Eardley, P., and
+              A. Morton, "A Reference Path and Measurement Points for
+              Large-Scale Measurement of Broadband Performance",
+              RFC 7398, DOI 10.17487/RFC7398, February 2015,
+              <http://www.rfc-editor.org/info/rfc7398>.
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 7]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+8.2.  Informative References
+
+   [I-D.hardie-path-signals]
+              Hardie, T., "Path signals", draft-hardie-path-signals-00
+              (work in progress), October 2016.
+
+   [I-D.trammell-plus-abstract-mech]
+              Trammell, B., "Abstract Mechanisms for a Cooperative Path
+              Layer under Endpoint Control", draft-trammell-plus-
+              abstract-mech-00 (work in progress), September 2016.
+
+   [I-D.trammell-plus-statefulness]
+              Kuehlewind, M., Trammell, B., and J. Hildebrand,
+              "Transport-Independent Path Layer State Management",
+              draft-trammell-plus-statefulness-01 (work in progress),
+              November 2016.
+
+   [RFC0793]  Postel, J., "Transmission Control Protocol", STD 7,
+              RFC 793, DOI 10.17487/RFC0793, September 1981,
+              <http://www.rfc-editor.org/info/rfc793>.
+
+   [RFC2474]  Nichols, K., Blake, S., Baker, F., and D. Black,
+              "Definition of the Differentiated Services Field (DS
+              Field) in the IPv4 and IPv6 Headers", RFC 2474,
+              DOI 10.17487/RFC2474, December 1998,
+              <http://www.rfc-editor.org/info/rfc2474>.
+
+   [RFC7675]  Perumal, M., Wing, D., Ravindranath, R., Reddy, T., and M.
+              Thomson, "Session Traversal Utilities for NAT (STUN) Usage
+              for Consent Freshness", RFC 7675, DOI 10.17487/RFC7675,
+              October 2015, <http://www.rfc-editor.org/info/rfc7675>.
+
+Authors' Addresses
+
+   Brian Trammell
+   ETH Zurich
+   Gloriastrasse 35
+   8092 Zurich
+   Switzerland
+
+   Email: ietf@trammell.ch
+
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 8]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+   Mirja Kuehlewind
+   ETH Zurich
+   Gloriastrasse 35
+   8092 Zurich
+   Switzerland
+
+   Email: mirja.kuehlewind@tik.ee.ethz.ch
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 9]
