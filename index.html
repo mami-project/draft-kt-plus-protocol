@@ -284,14 +284,17 @@ address {
 <link href="#rfc.section.3.2" rel="Chapter" title="3.2 On-Path State Maintenance using the Basic Header"/>
 <link href="#rfc.section.3.3" rel="Chapter" title="3.3 Bidirectional Stop Signaling"/>
 <link href="#rfc.section.4" rel="Chapter" title="4 Path Communication Field"/>
-<link href="#rfc.section.4.1" rel="Chapter" title="4.1 Path to Receiver signals"/>
-<link href="#rfc.section.4.2" rel="Chapter" title="4.2 Sender to Path signals"/>
-<link href="#rfc.section.5" rel="Chapter" title="5 IANA Considerations"/>
-<link href="#rfc.section.6" rel="Chapter" title="6 Security Considerations"/>
-<link href="#rfc.section.7" rel="Chapter" title="7 Acknowledgments"/>
-<link href="#rfc.references" rel="Chapter" title="8 References"/>
-<link href="#rfc.references.1" rel="Chapter" title="8.1 Normative References"/>
-<link href="#rfc.references.2" rel="Chapter" title="8.2 Informative References"/>
+<link href="#rfc.section.4.1" rel="Chapter" title="4.1 Two-byte Path to Receiver signals"/>
+<link href="#rfc.section.5" rel="Chapter" title="5 Six-byte Path to Receiver Signals"/>
+<link href="#rfc.section.5.1" rel="Chapter" title="5.1 Two-byte Sender to Path signals"/>
+<link href="#rfc.section.5.2" rel="Chapter" title="5.2 Six-byte Sender to Path signals"/>
+<link href="#rfc.section.5.3" rel="Chapter" title="5.3 Integrity protection"/>
+<link href="#rfc.section.6" rel="Chapter" title="6 IANA Considerations"/>
+<link href="#rfc.section.7" rel="Chapter" title="7 Security Considerations"/>
+<link href="#rfc.section.8" rel="Chapter" title="8 Acknowledgments"/>
+<link href="#rfc.references" rel="Chapter" title="9 References"/>
+<link href="#rfc.references.1" rel="Chapter" title="9.1 Normative References"/>
+<link href="#rfc.references.2" rel="Chapter" title="9.2 Informative References"/>
 <link href="#rfc.authors" rel="Chapter"/>
 
 
@@ -364,14 +367,17 @@ address {
 <li>3.2.   <a href="#rfc.section.3.2">On-Path State Maintenance using the Basic Header</a></li>
 <li>3.3.   <a href="#rfc.section.3.3">Bidirectional Stop Signaling</a></li>
 </ul><li>4.   <a href="#rfc.section.4">Path Communication Field</a></li>
-<ul><li>4.1.   <a href="#rfc.section.4.1">Path to Receiver signals</a></li>
-<li>4.2.   <a href="#rfc.section.4.2">Sender to Path signals</a></li>
-</ul><li>5.   <a href="#rfc.section.5">IANA Considerations</a></li>
-<li>6.   <a href="#rfc.section.6">Security Considerations</a></li>
-<li>7.   <a href="#rfc.section.7">Acknowledgments</a></li>
-<li>8.   <a href="#rfc.references">References</a></li>
-<ul><li>8.1.   <a href="#rfc.references.1">Normative References</a></li>
-<li>8.2.   <a href="#rfc.references.2">Informative References</a></li>
+<ul><li>4.1.   <a href="#rfc.section.4.1">Two-byte Path to Receiver signals</a></li>
+</ul><li>5.   <a href="#rfc.section.5">Six-byte Path to Receiver Signals</a></li>
+<ul><li>5.1.   <a href="#rfc.section.5.1">Two-byte Sender to Path signals</a></li>
+<li>5.2.   <a href="#rfc.section.5.2">Six-byte Sender to Path signals</a></li>
+<li>5.3.   <a href="#rfc.section.5.3">Integrity protection</a></li>
+</ul><li>6.   <a href="#rfc.section.6">IANA Considerations</a></li>
+<li>7.   <a href="#rfc.section.7">Security Considerations</a></li>
+<li>8.   <a href="#rfc.section.8">Acknowledgments</a></li>
+<li>9.   <a href="#rfc.references">References</a></li>
+<ul><li>9.1.   <a href="#rfc.references.1">Normative References</a></li>
+<li>9.2.   <a href="#rfc.references.2">Informative References</a></li>
 </ul><li><a href="#rfc.authors">Authors' Addresses</a></li>
 
 
@@ -383,7 +389,7 @@ address {
 <p id="rfc.section.2.p.1">[EDITOR&#8217;S NOTE: do we need this? 2119 language?]</p>
 <h1 id="rfc.section.3"><a href="#rfc.section.3">3.</a> <a href="#base-header" id="base-header">Base Header</a></h1>
 <div id="rfc.figure.1"/>
-<div id="fig-header"/>
+<div id="fig-header-blank"/>
 <pre>
   3                   2                   1
 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
@@ -392,23 +398,40 @@ address {
 +--------------------------------------------------------------+
 |       UDP length             |      UDP checksum             |
 +--------------------------------------------------------------+
-|                      magic / version                         |
+|                 version / magic number A                     |
++-----+--------+-----------------------------------------------+
+|  0  |ignored |                                               \
++-----+--------+                                               /
+/                                                              \
+\         transport protocol header/payload (encrypted)        /
+/                                                              \
+</pre>
+<p class="figure">Figure 1: PLUS header with no exposure</p>
+<div id="rfc.figure.2"/>
+<div id="fig-header-basic"/>
+<pre>
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++--------------------------------------------------------------+
+|       UDP source port        |      UDP destination port     |
++--------------------------------------------------------------+
+|       UDP length             |      UDP checksum             |
++--------------------------------------------------------------+
+|                 version / magic number B                     |
 +--------------------------------------------------------------+
 |                 connection identifier CID                    |
 +--------------------------------------------------------------+
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+---+-+--------+-----------------------------------------------+
-|PCL|S|ignored |                                               |
-+---+-+--------+  path communication field  PCF (optional)    -+
-|                                                              |
-+--------------------------------------------------------------+
++-+-+----------+-----------------------------------------------+
+|S|0| ignored  |                                               \
++-+-+----------+                                               /
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
-\                                                              \
+/                                                              \
 </pre>
-<p class="figure">Figure 1: PLUS header</p>
+<p class="figure">Figure 2: PLUS header with basic exposure</p>
 <p id="rfc.section.3.p.1">[EDITOR&#8217;S NOTE: prosify the following]</p>
 <p id="rfc.section.3.p.2">The PLUS header appears on each packet. It has the following fields:</p>
 <p/>
@@ -427,7 +450,7 @@ address {
 <p id="rfc.section.3.1.p.1">[EDITOR&#8217;S NOTE: explain how to measure RTT and loss using CID/PSN/PSE]</p>
 <h1 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2.</a> <a href="#on-path-state-maintenance-using-the-basic-header" id="on-path-state-maintenance-using-the-basic-header">On-Path State Maintenance using the Basic Header</a></h1>
 <p id="rfc.section.3.2.p.1">[EDITOR&#8217;S NOTE: note rough TCP-equivalence of this state machine&#8230;]</p>
-<div id="rfc.figure.2"/>
+<div id="rfc.figure.3"/>
 <div id="fig-states"/>
 <pre>
 redraw this for bidirectional stop and specific CID/PSN/PSE signaling
@@ -457,53 +480,90 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
                              pkt(s&lt;-&gt;d)
     
 </pre>
-<p class="figure">Figure 2: Signals PLUS provides to the transport-independent state machine</p>
+<p class="figure">Figure 3: Signals PLUS provides to the transport-independent state machine</p>
 <h1 id="rfc.section.3.3"><a href="#rfc.section.3.3">3.3.</a> <a href="#bidirectional-stop-signaling" id="bidirectional-stop-signaling">Bidirectional Stop Signaling</a></h1>
 <p id="rfc.section.3.3.p.1">[EDITOR&#8217;S NOTE: describe bidirectional stop signaling and explain why it works.]</p>
 <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a> <a href="#path-communication-field" id="path-communication-field">Path Communication Field</a></h1>
-<div id="rfc.figure.3"/>
-<div id="fig-pcf3"/>
-<pre>
-  3                   2                   1
-1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-               +-+-+---+-------+-------------------------------+
-               |L|R|DIR| type  |          value                |
-               +-+-+---+-------+-------------------------------+
-</pre>
-<p class="figure">Figure 3: Path Communication Field: 3-byte variant</p>
 <div id="rfc.figure.4"/>
-<div id="fig-pcf7"/>
+<div id="fig-header-pcf3"/>
 <pre>
   3                   2                   1
 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-               +-+-+-+-+-------+-------------------------------+
-               |L|R|X|D| type  |          value                |
-+--------------+-+-+-+-+-------+                               |
++--------------------------------------------------------------+
+|       UDP source port        |      UDP destination port     |
++--------------------------------------------------------------+
+|       UDP length             |      UDP checksum             |
++--------------------------------------------------------------+
+|                 version / magic number B                     |
++--------------------------------------------------------------+
+|                 connection identifier CID                    |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++-+-+----------+-+-+-+-+-+-----+-------------------------------+
+|S|1| ignored  |L|R|X|D|0|  T  |          value                |
++-+-+----------+-+-+-+-+-+-----+-------------------------------+
+/                                                              \
+\         transport protocol header/payload (encrypted)        /
+/                                                              \
+</pre>
+<p class="figure">Figure 4: PLUS header with 3-byte PCF</p>
+<div id="rfc.figure.5"/>
+<div id="fig-header-pcf7"/>
+<pre>
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++--------------------------------------------------------------+
+|       UDP source port        |      UDP destination port     |
++--------------------------------------------------------------+
+|       UDP length             |      UDP checksum             |
++--------------------------------------------------------------+
+|                 version / magic number B                     |
++--------------------------------------------------------------+
+|                 connection identifier CID                    |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++-+-+----------+-+-+-+-+-+-----+-------------------------------+
+|S|1| ignored  |L|R|X|D|1|  T  |          value                |
++-+-+----------+-+-+-+-+-+-----+                               |
 |                                                              |
 +--------------------------------------------------------------+
+/                                                              \
+\         transport protocol header/payload (encrypted)        /
+/                                                              \
 </pre>
-<p class="figure">Figure 4: Path Communication Field: 7-byte variant</p>
+<p class="figure">Figure 5: PLUS header with 7-byte PCF</p>
 <p/>
 
 <ul>
   <li>flag L: if set, packet is latency sensitive and prefers drop to delay</li>
-  <li>flag R: if set, packet is not sensitive to reordering, and may be freely reordered [EDITOR&#8217;S NOTE: how does this ]</li>
-  <li>codepoint DIR: 0 = path to receiver (presence integrity-protected), 1 = sender to path (integrity-protected).</li>
-  <li>type: information type associated with value</li>
-  <li>value: 2 or 6 bytes of value, to be interpreted/filled according to type</li>
+  <li>flag R: if set, packet is not sensitive to reordering, and may be freely reordered [EDITOR&#8217;S NOTE: how does this interact with PSN/PSE?]</li>
+  <li>flag X: reserved, must be zero</li>
+  <li>flag D: 1 sender-to-path, 0 path-to-receiver</li>
+  <li>flag V: 0 two-byte value, 1 six-byte value</li>
+  <li>T: information type associated with value. Shown as a five-bit value DVT.</li>
+  <li>value: 2 or 6 bytes of value, depending on V, to be interpreted according to T.</li>
 </ul>
-<h1 id="rfc.section.4.1"><a href="#rfc.section.4.1">4.1.</a> <a href="#path-to-receiver-signals" id="path-to-receiver-signals">Path to Receiver signals</a></h1>
+<h1 id="rfc.section.4.1"><a href="#rfc.section.4.1">4.1.</a> <a href="#two-byte-path-to-receiver-signals" id="two-byte-path-to-receiver-signals">Two-byte Path to Receiver signals</a></h1>
 <p/>
 
 <ul>
   <li>0x00: reserved</li>
-  <li>0x01: reserved</li>
-  <li>0x02: reserved</li>
+  <li>0x01: Path MTU accumulator. Two bytes of value containing the accumulated path MTU, measured in bytes, initialized to the sender&#8217;s MTU by the sender. A PLUS-aware forwarding device on path receiving this value MUST fill the minimum of the recieved value and the MTU of the next hop into this field.</li>
+  <li>0x02: Path state timeout accumulator. Two bytes of value. (Define how this works)</li>
   <li>0x03: reserved</li>
   <li>0x04: reserved</li>
   <li>0x05: reserved</li>
   <li>0x06: reserved</li>
   <li>0x07: reserved</li>
+</ul>
+<h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a> <a href="#six-byte-path-to-receiver-signals" id="six-byte-path-to-receiver-signals">Six-byte Path to Receiver Signals</a></h1>
+<p/>
+
+<ul>
   <li>0x08: reserved</li>
   <li>0x09: reserved</li>
   <li>0x0a: reserved</li>
@@ -513,20 +573,25 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
   <li>0x0e: reserved</li>
   <li>0x0f: reserved</li>
 </ul>
-<h1 id="rfc.section.4.2"><a href="#rfc.section.4.2">4.2.</a> <a href="#sender-to-path-signals" id="sender-to-path-signals">Sender to Path signals</a></h1>
+<h1 id="rfc.section.5.1"><a href="#rfc.section.5.1">5.1.</a> <a href="#two-byte-sender-to-path-signals" id="two-byte-sender-to-path-signals">Two-byte Sender to Path signals</a></h1>
 <p/>
 
 <ul>
   <li>0x10: reserved</li>
-  <li>0x11: reserved</li>
+  <li>0x11: Sender rate intent. Two bytes of value. (Define how this works: logarithmic scaled value for bandwidth demand.)</li>
   <li>0x12: reserved</li>
   <li>0x13: reserved</li>
   <li>0x14: reserved</li>
   <li>0x15: reserved</li>
   <li>0x16: reserved</li>
   <li>0x17: reserved</li>
+</ul>
+<h1 id="rfc.section.5.2"><a href="#rfc.section.5.2">5.2.</a> <a href="#six-byte-sender-to-path-signals" id="six-byte-sender-to-path-signals">Six-byte Sender to Path signals</a></h1>
+<p/>
+
+<ul>
   <li>0x18: reserved</li>
-  <li>0x19: reserved</li>
+  <li>0x19: Timestamp. Six bytes of value. (Define how this works)</li>
   <li>0x1a: reserved</li>
   <li>0x1b: reserved</li>
   <li>0x1c: reserved</li>
@@ -534,14 +599,16 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
   <li>0x1e: reserved</li>
   <li>0x1f: reserved</li>
 </ul>
-<h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a></h1>
-<p id="rfc.section.5.p.1">This document has no actions for IANA. Signal types may be moved to a Standards Action registry in the future.</p>
-<h1 id="rfc.section.6"><a href="#rfc.section.6">6.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a></h1>
-<p id="rfc.section.6.p.1">[EDITOR&#8217;S NOTE: write me]</p>
-<h1 id="rfc.section.7"><a href="#rfc.section.7">7.</a> <a href="#acknowledgments" id="acknowledgments">Acknowledgments</a></h1>
-<p id="rfc.section.7.p.1">This work is partially supported by the European Commission under Horizon 2020 grant agreement no. 688421 Measurement and Architecture for a Middleboxed Internet (MAMI), and by the Swiss State Secretariat for Education, Research, and Innovation under contract no. 15.0268. This support does not imply endorsement.</p>
-<h1 id="rfc.references"><a href="#rfc.references">8.</a> References</h1>
-<h1 id="rfc.references.1"><a href="#rfc.references.1">8.1.</a> Normative References</h1>
+<h1 id="rfc.section.5.3"><a href="#rfc.section.5.3">5.3.</a> <a href="#integrity-protection" id="integrity-protection">Integrity protection</a></h1>
+<p id="rfc.section.5.3.p.1">[EDITOR&#8217;S NOTE: is it sufficient to delegate this completely to the overlying transport, or do we want to define an HMAC based on a secret coordinated with the overlying transport?]</p>
+<h1 id="rfc.section.6"><a href="#rfc.section.6">6.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a></h1>
+<p id="rfc.section.6.p.1">This document has no actions for IANA. Signal types may be moved to a Standards Action registry in the future.</p>
+<h1 id="rfc.section.7"><a href="#rfc.section.7">7.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a></h1>
+<p id="rfc.section.7.p.1">[EDITOR&#8217;S NOTE: write me]</p>
+<h1 id="rfc.section.8"><a href="#rfc.section.8">8.</a> <a href="#acknowledgments" id="acknowledgments">Acknowledgments</a></h1>
+<p id="rfc.section.8.p.1">This work is partially supported by the European Commission under Horizon 2020 grant agreement no. 688421 Measurement and Architecture for a Middleboxed Internet (MAMI), and by the Swiss State Secretariat for Education, Research, and Innovation under contract no. 15.0268. This support does not imply endorsement.</p>
+<h1 id="rfc.references"><a href="#rfc.references">9.</a> References</h1>
+<h1 id="rfc.references.1"><a href="#rfc.references.1">9.1.</a> Normative References</h1>
 <table>
   <tbody>
     <tr>
@@ -564,7 +631,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
     </tr>
   </tbody>
 </table>
-<h1 id="rfc.references.2"><a href="#rfc.references.2">8.2.</a> Informative References</h1>
+<h1 id="rfc.references.2"><a href="#rfc.references.2">9.2.</a> Informative References</h1>
 <table>
   <tbody>
     <tr>

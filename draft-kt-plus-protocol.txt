@@ -68,17 +68,20 @@ Table of Contents
    3.  Base Header . . . . . . . . . . . . . . . . . . . . . . . . .   2
      3.1.  Measurement and Diagnosis using the Basic Header  . . . .   4
      3.2.  On-Path State Maintenance using the Basic Header  . . . .   4
-     3.3.  Bidirectional Stop Signaling  . . . . . . . . . . . . . .   4
+     3.3.  Bidirectional Stop Signaling  . . . . . . . . . . . . . .   5
    4.  Path Communication Field  . . . . . . . . . . . . . . . . . .   5
-     4.1.  Path to Receiver signals  . . . . . . . . . . . . . . . .   5
-     4.2.  Sender to Path signals  . . . . . . . . . . . . . . . . .   6
-   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   7
-   6.  Security Considerations . . . . . . . . . . . . . . . . . . .   7
-   7.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .   7
-   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   7
-     8.1.  Normative References  . . . . . . . . . . . . . . . . . .   7
-     8.2.  Informative References  . . . . . . . . . . . . . . . . .   8
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   8
+     4.1.  Two-byte Path to Receiver signals . . . . . . . . . . . .   7
+   5.  Six-byte Path to Receiver Signals . . . . . . . . . . . . . .   7
+     5.1.  Two-byte Sender to Path signals . . . . . . . . . . . . .   8
+     5.2.  Six-byte Sender to Path signals . . . . . . . . . . . . .   8
+     5.3.  Integrity protection  . . . . . . . . . . . . . . . . . .   9
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
+   8.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .   9
+   9.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
+     9.1.  Normative References  . . . . . . . . . . . . . . . . . .   9
+     9.2.  Informative References  . . . . . . . . . . . . . . . . .  10
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  10
 
 1.  Introduction
 
@@ -106,9 +109,6 @@ Table of Contents
 
 
 
-
-
-
 Trammell & Kuehlewind     Expires June 16, 2017                 [Page 2]
 
 Internet-Draft                PLUS Protocol                December 2016
@@ -121,23 +121,38 @@ Internet-Draft                PLUS Protocol                December 2016
    +--------------------------------------------------------------+
    |       UDP length             |      UDP checksum             |
    +--------------------------------------------------------------+
-   |                      magic / version                         |
+   |                 version / magic number A                     |
+   +-----+--------+-----------------------------------------------+
+   |  0  |ignored |                                               \
+   +-----+--------+                                               /
+   /                                                              \
+   \         transport protocol header/payload (encrypted)        /
+   /                                                              \
+
+                  Figure 1: PLUS header with no exposure
+
+     3                   2                   1
+   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+   +--------------------------------------------------------------+
+   |       UDP source port        |      UDP destination port     |
+   +--------------------------------------------------------------+
+   |       UDP length             |      UDP checksum             |
+   +--------------------------------------------------------------+
+   |                 version / magic number B                     |
    +--------------------------------------------------------------+
    |                 connection identifier CID                    |
    +--------------------------------------------------------------+
    |                 packet serial number  PSN                    |
    +--------------------------------------------------------------+
    |                 packet serial echo    PSE                    |
-   +---+-+--------+-----------------------------------------------+
-   |PCL|S|ignored |                                               |
-   +---+-+--------+  path communication field  PCF (optional)    -+
-   |                                                              |
-   +--------------------------------------------------------------+
+   +-+-+----------+-----------------------------------------------+
+   |S|0| ignored  |                                               \
+   +-+-+----------+                                               /
    /                                                              \
    \         transport protocol header/payload (encrypted)        /
-   \                                                              \
+   /                                                              \
 
-                           Figure 1: PLUS header
+                 Figure 2: PLUS header with basic exposure
 
    [EDITOR'S NOTE: prosify the following]
 
@@ -147,6 +162,13 @@ Internet-Draft                PLUS Protocol                December 2016
       reflectable property identified in SPUD.
 
    o  CID: refer to Connection ID design team output for DTLS/QUIC
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 3]
+
+Internet-Draft                PLUS Protocol                December 2016
+
 
    o  PSN: initial chosen randomly, increments by one for each packet
       sent, including control-only packets and retransmissions.
@@ -163,13 +185,6 @@ Internet-Draft                PLUS Protocol                December 2016
 
    o  PCF: see definition in Section 4
 
-
-
-Trammell & Kuehlewind     Expires June 16, 2017                 [Page 3]
-
-Internet-Draft                PLUS Protocol                December 2016
-
-
 3.1.  Measurement and Diagnosis using the Basic Header
 
    [EDITOR'S NOTE: explain how to measure RTT and loss using CID/PSN/
@@ -178,6 +193,38 @@ Internet-Draft                PLUS Protocol                December 2016
 3.2.  On-Path State Maintenance using the Basic Header
 
    [EDITOR'S NOTE: note rough TCP-equivalence of this state machine...]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 4]
+
+Internet-Draft                PLUS Protocol                December 2016
+
 
  redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 
@@ -206,7 +253,7 @@ Internet-Draft                PLUS Protocol                December 2016
                               pkt(s<->d)
 
 
-    Figure 2: Signals PLUS provides to the transport-independent state
+    Figure 3: Signals PLUS provides to the transport-independent state
                                   machine
 
 3.3.  Bidirectional Stop Signaling
@@ -214,65 +261,18 @@ Internet-Draft                PLUS Protocol                December 2016
    [EDITOR'S NOTE: describe bidirectional stop signaling and explain why
    it works.]
 
-
-
-
-
-
-
-
-Trammell & Kuehlewind     Expires June 16, 2017                 [Page 4]
-
-Internet-Draft                PLUS Protocol                December 2016
-
-
 4.  Path Communication Field
 
-     3                   2                   1
-   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-                  +-+-+---+-------+-------------------------------+
-                  |L|R|DIR| type  |          value                |
-                  +-+-+---+-------+-------------------------------+
 
-            Figure 3: Path Communication Field: 3-byte variant
 
-     3                   2                   1
-   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-                  +-+-+-+-+-------+-------------------------------+
-                  |L|R|X|D| type  |          value                |
-   +--------------+-+-+-+-+-------+                               |
-   |                                                              |
-   +--------------------------------------------------------------+
 
-            Figure 4: Path Communication Field: 7-byte variant
 
-   o  flag L: if set, packet is latency sensitive and prefers drop to
-      delay
 
-   o  flag R: if set, packet is not sensitive to reordering, and may be
-      freely reordered [EDITOR'S NOTE: how does this ]
 
-   o  codepoint DIR: 0 = path to receiver (presence integrity-
-      protected), 1 = sender to path (integrity-protected).
 
-   o  type: information type associated with value
 
-   o  value: 2 or 6 bytes of value, to be interpreted/filled according
-      to type
 
-4.1.  Path to Receiver signals
 
-   o  0x00: reserved
-
-   o  0x01: reserved
-
-   o  0x02: reserved
-
-   o  0x03: reserved
-
-   o  0x04: reserved
-
-   o  0x05: reserved
 
 
 
@@ -282,13 +282,117 @@ Trammell & Kuehlewind     Expires June 16, 2017                 [Page 5]
 Internet-Draft                PLUS Protocol                December 2016
 
 
+     3                   2                   1
+   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+   +--------------------------------------------------------------+
+   |       UDP source port        |      UDP destination port     |
+   +--------------------------------------------------------------+
+   |       UDP length             |      UDP checksum             |
+   +--------------------------------------------------------------+
+   |                 version / magic number B                     |
+   +--------------------------------------------------------------+
+   |                 connection identifier CID                    |
+   +--------------------------------------------------------------+
+   |                 packet serial number  PSN                    |
+   +--------------------------------------------------------------+
+   |                 packet serial echo    PSE                    |
+   +-+-+----------+-+-+-+-+-+-----+-------------------------------+
+   |S|1| ignored  |L|R|X|D|0|  T  |          value                |
+   +-+-+----------+-+-+-+-+-+-----+-------------------------------+
+   /                                                              \
+   \         transport protocol header/payload (encrypted)        /
+   /                                                              \
+
+                   Figure 4: PLUS header with 3-byte PCF
+
+     3                   2                   1
+   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+   +--------------------------------------------------------------+
+   |       UDP source port        |      UDP destination port     |
+   +--------------------------------------------------------------+
+   |       UDP length             |      UDP checksum             |
+   +--------------------------------------------------------------+
+   |                 version / magic number B                     |
+   +--------------------------------------------------------------+
+   |                 connection identifier CID                    |
+   +--------------------------------------------------------------+
+   |                 packet serial number  PSN                    |
+   +--------------------------------------------------------------+
+   |                 packet serial echo    PSE                    |
+   +-+-+----------+-+-+-+-+-+-----+-------------------------------+
+   |S|1| ignored  |L|R|X|D|1|  T  |          value                |
+   +-+-+----------+-+-+-+-+-+-----+                               |
+   |                                                              |
+   +--------------------------------------------------------------+
+   /                                                              \
+   \         transport protocol header/payload (encrypted)        /
+   /                                                              \
+
+                   Figure 5: PLUS header with 7-byte PCF
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 6]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+   o  flag L: if set, packet is latency sensitive and prefers drop to
+      delay
+
+   o  flag R: if set, packet is not sensitive to reordering, and may be
+      freely reordered [EDITOR'S NOTE: how does this interact with PSN/
+      PSE?]
+
+   o  flag X: reserved, must be zero
+
+   o  flag D: 1 sender-to-path, 0 path-to-receiver
+
+   o  flag V: 0 two-byte value, 1 six-byte value
+
+   o  T: information type associated with value.  Shown as a five-bit
+      value DVT.
+
+   o  value: 2 or 6 bytes of value, depending on V, to be interpreted
+      according to T.
+
+4.1.  Two-byte Path to Receiver signals
+
+   o  0x00: reserved
+
+   o  0x01: Path MTU accumulator.  Two bytes of value containing the
+      accumulated path MTU, measured in bytes, initialized to the
+      sender's MTU by the sender.  A PLUS-aware forwarding device on
+      path receiving this value MUST fill the minimum of the recieved
+      value and the MTU of the next hop into this field.
+
+   o  0x02: Path state timeout accumulator.  Two bytes of value.
+      (Define how this works)
+
+   o  0x03: reserved
+
+   o  0x04: reserved
+
+   o  0x05: reserved
+
    o  0x06: reserved
 
    o  0x07: reserved
 
+5.  Six-byte Path to Receiver Signals
+
    o  0x08: reserved
 
    o  0x09: reserved
+
+
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 7]
+
+Internet-Draft                PLUS Protocol                December 2016
+
 
    o  0x0a: reserved
 
@@ -302,11 +406,12 @@ Internet-Draft                PLUS Protocol                December 2016
 
    o  0x0f: reserved
 
-4.2.  Sender to Path signals
+5.1.  Two-byte Sender to Path signals
 
    o  0x10: reserved
 
-   o  0x11: reserved
+   o  0x11: Sender rate intent.  Two bytes of value.  (Define how this
+      works: logarithmic scaled value for bandwidth demand.)
 
    o  0x12: reserved
 
@@ -320,9 +425,11 @@ Internet-Draft                PLUS Protocol                December 2016
 
    o  0x17: reserved
 
+5.2.  Six-byte Sender to Path signals
+
    o  0x18: reserved
 
-   o  0x19: reserved
+   o  0x19: Timestamp.  Six bytes of value.  (Define how this works)
 
    o  0x1a: reserved
 
@@ -330,30 +437,35 @@ Internet-Draft                PLUS Protocol                December 2016
 
    o  0x1c: reserved
 
-
-
-
-Trammell & Kuehlewind     Expires June 16, 2017                 [Page 6]
-
-Internet-Draft                PLUS Protocol                December 2016
-
-
    o  0x1d: reserved
 
    o  0x1e: reserved
 
    o  0x1f: reserved
 
-5.  IANA Considerations
+
+
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 8]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
+5.3.  Integrity protection
+
+   [EDITOR'S NOTE: is it sufficient to delegate this completely to the
+   overlying transport, or do we want to define an HMAC based on a
+   secret coordinated with the overlying transport?]
+
+6.  IANA Considerations
 
    This document has no actions for IANA.  Signal types may be moved to
    a Standards Action registry in the future.
 
-6.  Security Considerations
+7.  Security Considerations
 
    [EDITOR'S NOTE: write me]
 
-7.  Acknowledgments
+8.  Acknowledgments
 
    This work is partially supported by the European Commission under
    Horizon 2020 grant agreement no. 688421 Measurement and Architecture
@@ -361,9 +473,9 @@ Internet-Draft                PLUS Protocol                December 2016
    for Education, Research, and Innovation under contract no. 15.0268.
    This support does not imply endorsement.
 
-8.  References
+9.  References
 
-8.1.  Normative References
+9.1.  Normative References
 
    [RFC5103]  Trammell, B. and E. Boschi, "Bidirectional Flow Export
               Using IP Flow Information Export (IPFIX)", RFC 5103,
@@ -389,12 +501,12 @@ Internet-Draft                PLUS Protocol                December 2016
 
 
 
-Trammell & Kuehlewind     Expires June 16, 2017                 [Page 7]
+Trammell & Kuehlewind     Expires June 16, 2017                 [Page 9]
 
 Internet-Draft                PLUS Protocol                December 2016
 
 
-8.2.  Informative References
+9.2.  Informative References
 
    [I-D.hardie-path-signals]
               Hardie, T., "Path signals", draft-hardie-path-signals-00
@@ -445,7 +557,7 @@ Authors' Addresses
 
 
 
-Trammell & Kuehlewind     Expires June 16, 2017                 [Page 8]
+Trammell & Kuehlewind     Expires June 16, 2017                [Page 10]
 
 Internet-Draft                PLUS Protocol                December 2016
 
@@ -501,4 +613,4 @@ Internet-Draft                PLUS Protocol                December 2016
 
 
 
-Trammell & Kuehlewind     Expires June 16, 2017                 [Page 9]
+Trammell & Kuehlewind     Expires June 16, 2017                [Page 11]
