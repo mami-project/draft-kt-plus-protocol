@@ -105,14 +105,16 @@ Every packet in each direction of a flow using PLUS MUST carry a PLUS header. Th
 +--------------------------------------------------------------+
 |                  version / magic number                      |
 +--------------------------------------------------------------+
-|                 connection identifier CID                    |
+|                                                              |
++                 connection identifier CID                    +
+|                                                              |
 +--------------------------------------------------------------+
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+----------+-----------------------------------------------+
-|S|0| ignored  |                                               \
-+-+-+----------+                                               /
++-+-+-+-+------+-----------------------------------------------+
+|S|0|L|R| ign  |                                               \
++-+-+-+-+------+                                               /
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
@@ -127,8 +129,9 @@ The PLUS header appears on each packet. It has the following fields:
 - CID: refer to Connection ID design team output for DTLS/QUIC
 - PSN: initial chosen randomly, increments by one for each packet sent, including control-only packets and retransmissions.
 - PSE: highest PSN seen when packet sent, for RTT and state establishment
-- PCL: path control length code: 00 = not present; 01 = 3 byte; 10 = 7 byte; 11 = reserved.
-- S: bidirectional stop, see {{bidirectional-stop-signaling}}
+- flag S: bidirectional stop, see {{bidirectional-stop-signaling}}
+- flag L: if set, packet is latency sensitive and prefers drop to delay
+- flag R: if set, packet is not sensitive to reordering, and may be freely reordered [EDITOR'S NOTE: how does this interact with PSN/PSE?]
 - ignored flags: reserved for use by overlying transport protocol
 - PCF: see definition in {{path-communication-field}} 
 
@@ -141,11 +144,53 @@ The PLUS header appears on each packet. It has the following fields:
 [EDITOR'S NOTE: note rough TCP-equivalence of this state machine. note that CID binds on the first packet seen.]
 
 ~~~~~~~~~~~~~
-redraw this for bidirectional stop and specific CID/PSN/PSE signaling
-we may need an "anon uniflow" state for blank header packets
-note we need CID for association. CID mismatch needs a state, probably.
-how does an incomplete close work? you stay in closing but timeout after associated.
+    `- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'
+    `                        +============+                       '
+    `                       /              \    TO_IDLE           '
+  +-----------+----------->(      zero      )<---------+          '
+  ^ `         ^             \              /            \         '
+  | ` TO_IDLE |              +============+              \        '
+  | `          \   blank a->b /           \ basic a->b   /        '
+  | `           \            V             V            /         '
+  | `            +============+  basic    +============+          '
+  | `        +->/              \-------->/              \<-+      '
+  | `  blank | (  anon-uniflow  ) a->b  (  plus-uniflow  ) | any  '
+  | `   a->b +--\              /         \              /--+ a->b '
+  | `            +============+           +============+          '
+  | `- - - - - - - - - - - - \ basic b->a /- - - - - \ - - - - - -'
+  |                           V          V            \
+  | TO_IDLE                  +============+            \
+  +<------------------------/              \ wrong CID  \
+  |                        (  associating   )------------+
+  |                         \              /              \
+  | TO_ASSOCIATED            +============+                |
+  +<-----------------------+        | basic a->b           |
+  |                         \       V                      |
+  |                          +============+                |
+  |                      +->/              \   wrong CID   |
+  |            any a<->b | (   associated   )--------------+
+  |                      +--\              /               |
+  | TO_ASSOCIATED            +============+                |
+  +<-----------------+        | stop y->z                  |
+  |                   \       V                            V
+  |                    +============+                +============+
+  |                +->/              \  wrong CID   /              \
+  |      any a<->b | (    stopping    )----------->(    cid-fail    )
+  |                +--\              /              \              /
+  | TO_STOPWAIT        +============+                +============+
+  +------------+        | stop z->y
+                \       V
+                 +============+
+                /              \
+               (   stop-wait    )
+                \              /
+                 +============+
+~~~~~~~~~~~~~
+{: #fig-states title="Transport-independent state machine as implemented by PLUS"}
 
+here's the old one
+
+~~~~~~~~~~~~~
       .- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -.
       '    +==============+    pkt(s->d)    +==========+              '
       '   //              \\-------------->/            \--+          '
@@ -171,7 +216,7 @@ how does an incomplete close work? you stay in closing but timeout after associa
                                      pkt(s<->d)
     
 ~~~~~~~~~~~~~
-{: #fig-states title="Signals PLUS provides to the transport-independent state machine"}
+{: #fig-oldstates title="Old transport-independent state machine"}
 
 ## Bidirectional Stop Signaling
 
@@ -182,26 +227,56 @@ how does an incomplete close work? you stay in closing but timeout after associa
 ~~~~~~~~~~~~~
   3                   2                   1
 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-+--------------------------------------------------------------+
++------------------------------+-------------------------------+
 |       UDP source port        |      UDP destination port     |
-+--------------------------------------------------------------+
++------------------------------+-------------------------------+
 |       UDP length             |      UDP checksum             |
-+--------------------------------------------------------------+
++------------------------------+-------------------------------+
 |                  version / magic number                      |
 +--------------------------------------------------------------+
-|                 connection identifier CID                    |
+|                                                              |
++                 connection identifier CID                    +
+|                                                              |
 +--------------------------------------------------------------+
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+----------+-+-+-+-+-+-----+-------------------------------+
-|S|1| ignored  |L|R|X|D|0|  T  |          value                |
-+-+-+----------+-+-+-+-+-+-----+-------------------------------+
++-+-+-+-+------+---+-+-+-------+-------------------------------+
+|S|0|L|R| ign  |rsv|D|0|   T   |            PCF value          |
++-+-+-+-+------+---+-+-+-------+-------------------------------+
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
 ~~~~~~~~~~~~~
 {: #fig-header-pcf2 title="PLUS extended header with 2-byte PCF"}
+
+~~~~~~~~~~~~~
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++------------------------------+-------------------------------+
+|                  version / magic number                      |
++--------------------------------------------------------------+
+|                                                              |
++                 connection identifier CID                    +
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++-+-+-+-+------+---+-+-+-+-----+-------------------------------+
+|S|0|L|R| ign  |rsv|D|1|0|  T  |          PCF value            |
++-+-+-+-+------+---+-+-+-+-----+                               |
+|                                                              |
++--------------------------------------------------------------+
+/                                                              \
+\         transport protocol header/payload (encrypted)        /
+/                                                              \
+~~~~~~~~~~~~~
+{: #fig-header-pcf6 title="PLUS extended header with 6-byte PCF"}
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -213,73 +288,61 @@ how does an incomplete close work? you stay in closing but timeout after associa
 +--------------------------------------------------------------+
 |                  version / magic number                      |
 +--------------------------------------------------------------+
-|                 connection identifier CID                    |
+|                                                              |
++                 connection identifier CID                    +
+|                                                              |
 +--------------------------------------------------------------+
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+----------+-+-+-+-+-+-----+-------------------------------+
-|S|1| ignored  |L|R|X|D|1|  T  |          value                |
-+-+-+----------+-+-+-+-+-+-----+                               |
-|                                                              |
++-+-+-+-+------+---+-+-+-+-+---+---------------+---------------+
+|S|0|L|R| ign  |rsv|D|1|1|0| T |  PCF length   |               /
++-+-+-+-+------+---+-+-+-+-+---+---------------+               \
+\                                                              /
+/                    PCF value (varlen)                        \
+\                                                              /
 +--------------------------------------------------------------+
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
 ~~~~~~~~~~~~~
-{: #fig-header-pcf6 title="PLUS extended header with 6-byte PCF"}
+{: #fig-header-pcfv title="PLUS extended header with variable-length PCF"}
 
-- flag L: if set, packet is latency sensitive and prefers drop to delay
-- flag R: if set, packet is not sensitive to reordering, and may be freely reordered [EDITOR'S NOTE: how does this interact with PSN/PSE?]
 - flag X: reserved, must be zero
 - flag D: 1 sender-to-path, 0 path-to-receiver
-- flag V: 0 two-byte value, 1 six-byte value
-- T: information type associated with value. Shown as a five-bit value DVT.
-- value: 2 or 6 bytes of value, depending on V, to be interpreted according to T.
+- T: information type associated with value. Scoped to D and PCF length encoding
+- value: 2 or 6 bytes of value to be interpreted according to D/length/T.
 
-## Two-byte Path to Receiver signals
+There's another way to do this: 
 
-- 0x00: reserved
-- 0x01: Path MTU accumulator. Two bytes of value containing the accumulated path MTU, measured in bytes, initialized to the sender's MTU by the sender. A PLUS-aware forwarding device on path receiving this value MUST fill the minimum of the recieved value and the MTU of the next hop into this field.
-- 0x02: Path state timeout accumulator. Two bytes of value, unsigned 16-bit integer timeout in seconds, initialized to 65535 (max timeout). A PLUS-aware state-keeping device on path that will time out state MUST fill the minimum of the received value and its current timeout in seconds into this field.
-- 0x03: reserved
-- 0x04: reserved
-- 0x05: reserved
-- 0x06: reserved
-- 0x07: reserved
+D0xxxx two-byte value (sixteen possible short signals per direction)
+D10xxx six-byte value (eight possible medium signals per direction)
+D110xx variable-length value (four possible huge signals per direction)
+D1110x reserved
+
+## Two-byte Path to Receiver signals 
+
+(Codepoints to be assigned)
+
+- Path MTU accumulator. Two bytes of value containing the accumulated path MTU, measured in bytes, initialized to the sender's MTU by the sender. A PLUS-aware forwarding device on path receiving this value MUST fill the minimum of the recieved value and the MTU of the next hop into this field.
+- Path state timeout accumulator. Two bytes of value, unsigned 16-bit integer timeout in seconds, initialized to 65535 (max timeout). A PLUS-aware state-keeping device on path that will time out state MUST fill the minimum of the received value and its current timeout in seconds into this field.
+- Path rate intent accumulator. (Define how this works: logarithmic scaled value for bandwidth demand?) 
 
 # Six-byte Path to Receiver Signals
 
-- 0x08: reserved
-- 0x09: Path trace accumulator, similar to the Path Changes mechanism in section 4.3 of {{IPIM}}.
-- 0x0a: reserved
-- 0x0b: reserved
-- 0x0c: reserved
-- 0x0d: reserved
-- 0x0e: reserved
-- 0x0f: reserved
+(Codepoints to be assigned)
+
+- Path trace accumulator, similar to the Path Changes mechanism in section 4.3 of {{IPIM}}.
 
 ## Two-byte Sender to Path signals
 
-- 0x10: reserved
-- 0x11: Sender rate intent. Two bytes of value. (Define how this works: logarithmic scaled value for bandwidth demand?)
-- 0x12: reserved
-- 0x13: reserved
-- 0x14: reserved
-- 0x15: reserved
-- 0x16: reserved
-- 0x17: reserved
+(Codepoints to be assigned)
+
+- Sender rate intent. Two bytes of value. (Define how this works: logarithmic scaled value for bandwidth demand?)
 
 ## Six-byte Sender to Path signals
 
-- 0x18: reserved
-- 0x19: Timestamp. Six bytes of value; should include deltas as in section 4.1.2 of {{IPIM}}.
-- 0x1a: reserved
-- 0x1b: reserved
-- 0x1c: reserved
-- 0x1d: reserved
-- 0x1e: reserved
-- 0x1f: reserved
+- Timestamp. Six bytes of value; should include deltas as in section 4.1.2 of {{IPIM}}. May need to split echo/delta into a separate signal?
 
 ## Integrity protection
 
