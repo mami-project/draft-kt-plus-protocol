@@ -38,6 +38,18 @@ informative:
   I-D.trammell-plus-abstract-mech:
   I-D.trammell-plus-statefulness:
 
+  IPIM:
+    title: In-Protocol Internet Measurement
+    author:
+      - 
+        ins: M. Allman
+      -
+        ins: R. Beverly
+      -
+        ins: B. Trammell
+    url: https://arxiv.org/abs/1612.02902
+
+
 normative:
   RFC5103:
   RFC7011:
@@ -56,32 +68,17 @@ using the mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 
 # Introduction
 
-[EDITOR'S NOTE: three paragraphs on why we care, refer to path-signals, statefulness, abstract-mech. note intention to co-evolve with plus and connection id work.]
+[EDITOR'S NOTE: three paragraphs on why we care, refer to path-signals, statefulness, abstract-mech. note intention to co-evolve with quic and connection id work.]
 
 # Terminology
 
 [EDITOR'S NOTE: do we need this? 2119 language?]
 
-# Base Header
+# Blank and Basic Headers
 
-~~~~~~~~~~~~~
+Every packet in each direction of a flow using PLUS MUST carry a PLUS header. There are three kinds of PLUS header:
 
-  3                   2                   1
-1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-+--------------------------------------------------------------+
-|       UDP source port        |      UDP destination port     |
-+--------------------------------------------------------------+
-|       UDP length             |      UDP checksum             |
-+--------------------------------------------------------------+
-|                 version / magic number A                     |
-+-----+--------+-----------------------------------------------+
-|  0  |ignored |                                               \
-+-----+--------+                                               /
-/                                                              \
-\         transport protocol header/payload (encrypted)        /
-/                                                              \
-~~~~~~~~~~~~~
-{: #fig-header-blank title="PLUS header with no exposure"}
+- blank headers are used on packets which have neither 
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -91,7 +88,22 @@ using the mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 +--------------------------------------------------------------+
 |       UDP length             |      UDP checksum             |
 +--------------------------------------------------------------+
-|                 version / magic number B                     |
+/        first four bytes MUST NOT equal version / magic       \
+\                                                              /
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
+~~~~~~~~~~~~~
+{: #fig-header-blank title="PLUS blank header"}
+
+~~~~~~~~~~~~~
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++--------------------------------------------------------------+
+|       UDP source port        |      UDP destination port     |
++--------------------------------------------------------------+
+|       UDP length             |      UDP checksum             |
++--------------------------------------------------------------+
+|                  version / magic number                      |
 +--------------------------------------------------------------+
 |                 connection identifier CID                    |
 +--------------------------------------------------------------+
@@ -106,7 +118,6 @@ using the mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 /                                                              \
 ~~~~~~~~~~~~~
 {: #fig-header-basic title="PLUS header with basic exposure"}
-
 
 [EDITOR'S NOTE: prosify the following]
 
@@ -123,14 +134,17 @@ The PLUS header appears on each packet. It has the following fields:
 
 ## Measurement and Diagnosis using the Basic Header
 
-[EDITOR'S NOTE: explain how to measure RTT and loss using CID/PSN/PSE]
+[EDITOR'S NOTE: explain how to measure RTT and loss using CID/PSN/PSE. note that PSN increments on 
 
 ## On-Path State Maintenance using the Basic Header
 
-[EDITOR'S NOTE: note rough TCP-equivalence of this state machine...]
+[EDITOR'S NOTE: note rough TCP-equivalence of this state machine. note that CID binds on the first packet seen.]
 
 ~~~~~~~~~~~~~
 redraw this for bidirectional stop and specific CID/PSN/PSE signaling
+we may need an "anon uniflow" state for blank header packets
+note we need CID for association. CID mismatch needs a state, probably.
+how does an incomplete close work? you stay in closing but timeout after associated.
 
       .- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -.
       '    +==============+    pkt(s->d)    +==========+              '
@@ -138,23 +152,23 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
       '  ((      zero      ))             (    uniflow   ) |pkt(s->d) '
       '   \\              //<--------------\            /<-+          '
       '    +==============+  TO_IDLE/close  +==========+              '
-      '- - -|- - -  ^ - ^  - - - - - - - - - - - - - -|- - - - - - - -'
+      '- - -^- - -  ^ - ^  - - - - - - - - - - - - - -|- - - - - - - -'
             |        \   \                            |  association
  TO_CLOSING |         \   \                           V  signal
-      +==========+     \   \      TO_IDLE        +==========+  
+      +==========+     \   \       TO_IDLE       +==========+  
      /            \     \   +-------------------/            \--+ 
-    (    closing   )     \                     (  associating ) | pkt
-     \            /       \                     \            /<-+(s->d)
-      +==========+         \ TO_ASSOCIATED       +==========+  
-            ^               \                         |
-            |               +==========+              |  
-     close  |              /            \             |  confirmation
-    signal  |             (  associated  )            |  signal
-            +--------------\            /<------------+
-                            +==========+  
-                              |      ^
-                              +------+
-                             pkt(s<->d)
+    (  closewait   )     \   TO_ASSOCIATED     (  associating ) | pkt
+     \            /       +----------------+    \            /<-+(s->d)
+      +==========+                         |     +==========+  
+            ^                              |           |
+            |     +==========+       +==========+      |  
+     close  |    /            \     /            \     |  confirmation
+    signal  |   (    closing   )   (  associated  )    |  signal
+            +----\            /<----\            /<----+
+                  +==========+      +==========+  
+                                      |      ^
+                                      +------+
+                                     pkt(s<->d)
     
 ~~~~~~~~~~~~~
 {: #fig-states title="Signals PLUS provides to the transport-independent state machine"}
@@ -173,7 +187,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 +--------------------------------------------------------------+
 |       UDP length             |      UDP checksum             |
 +--------------------------------------------------------------+
-|                 version / magic number B                     |
+|                  version / magic number                      |
 +--------------------------------------------------------------+
 |                 connection identifier CID                    |
 +--------------------------------------------------------------+
@@ -187,7 +201,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
 ~~~~~~~~~~~~~
-{: #fig-header-pcf3 title="PLUS header with 3-byte PCF"}
+{: #fig-header-pcf2 title="PLUS extended header with 2-byte PCF"}
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -197,7 +211,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 +--------------------------------------------------------------+
 |       UDP length             |      UDP checksum             |
 +--------------------------------------------------------------+
-|                 version / magic number B                     |
+|                  version / magic number                      |
 +--------------------------------------------------------------+
 |                 connection identifier CID                    |
 +--------------------------------------------------------------+
@@ -213,7 +227,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
 ~~~~~~~~~~~~~
-{: #fig-header-pcf7 title="PLUS header with 7-byte PCF"}
+{: #fig-header-pcf6 title="PLUS extended header with 6-byte PCF"}
 
 - flag L: if set, packet is latency sensitive and prefers drop to delay
 - flag R: if set, packet is not sensitive to reordering, and may be freely reordered [EDITOR'S NOTE: how does this interact with PSN/PSE?]
@@ -227,7 +241,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 
 - 0x00: reserved
 - 0x01: Path MTU accumulator. Two bytes of value containing the accumulated path MTU, measured in bytes, initialized to the sender's MTU by the sender. A PLUS-aware forwarding device on path receiving this value MUST fill the minimum of the recieved value and the MTU of the next hop into this field.
-- 0x02: Path state timeout accumulator. Two bytes of value. (Define how this works)
+- 0x02: Path state timeout accumulator. Two bytes of value, unsigned 16-bit integer timeout in seconds, initialized to 65535 (max timeout). A PLUS-aware state-keeping device on path that will time out state MUST fill the minimum of the received value and its current timeout in seconds into this field.
 - 0x03: reserved
 - 0x04: reserved
 - 0x05: reserved
@@ -237,7 +251,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 # Six-byte Path to Receiver Signals
 
 - 0x08: reserved
-- 0x09: reserved
+- 0x09: Path trace accumulator, similar to the Path Changes mechanism in section 4.3 of {{IPIM}}.
 - 0x0a: reserved
 - 0x0b: reserved
 - 0x0c: reserved
@@ -248,7 +262,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 ## Two-byte Sender to Path signals
 
 - 0x10: reserved
-- 0x11: Sender rate intent. Two bytes of value. (Define how this works: logarithmic scaled value for bandwidth demand.)
+- 0x11: Sender rate intent. Two bytes of value. (Define how this works: logarithmic scaled value for bandwidth demand?)
 - 0x12: reserved
 - 0x13: reserved
 - 0x14: reserved
@@ -259,7 +273,7 @@ redraw this for bidirectional stop and specific CID/PSN/PSE signaling
 ## Six-byte Sender to Path signals
 
 - 0x18: reserved
-- 0x19: Timestamp. Six bytes of value. (Define how this works)
+- 0x19: Timestamp. Six bytes of value; should include deltas as in section 4.1.2 of {{IPIM}}.
 - 0x1a: reserved
 - 0x1b: reserved
 - 0x1c: reserved
