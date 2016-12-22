@@ -74,26 +74,9 @@ using the mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 
 [EDITOR'S NOTE: do we need this? 2119 language?]
 
-# Blank and Basic Headers
+# Basic Headers
 
-Every packet in each direction of a flow using PLUS MUST carry a PLUS header. There are three kinds of PLUS header:
-
-- blank headers are used on packets which have neither 
-
-~~~~~~~~~~~~~
-  3                   2                   1
-1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-+--------------------------------------------------------------+
-|       UDP source port        |      UDP destination port     |
-+--------------------------------------------------------------+
-|       UDP length             |      UDP checksum             |
-+--------------------------------------------------------------+
-/        first four bytes MUST NOT equal version / magic       \
-\                                                              /
-/         transport protocol header/payload (encrypted)        \
-\                                                              /
-~~~~~~~~~~~~~
-{: #fig-header-blank title="PLUS blank header"}
+Every packet in each direction of a flow using PLUS MUST carry either a PLUS basic or PLUS extended header. The PLUS basic header supports multiplexing using a connection token; basic state maintenance using association/confirmation signals, packet serial numbers, and a two-way stop signal; and basic measurability using packet serial number echo. The format of the basic header, together with the UDP header, is shown in {{fig-header-basic}}
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -106,7 +89,7 @@ Every packet in each direction of a flow using PLUS MUST carry a PLUS header. Th
 |                  version / magic number                      |
 +--------------------------------------------------------------+
 |                                                              |
-+                 connection identifier CID                    +
++              connection/association token CAT                +
 |                                                              |
 +--------------------------------------------------------------+
 |                 packet serial number  PSN                    |
@@ -121,12 +104,12 @@ Every packet in each direction of a flow using PLUS MUST carry a PLUS header. Th
 ~~~~~~~~~~~~~
 {: #fig-header-basic title="PLUS header with basic exposure"}
 
-[EDITOR'S NOTE: prosify the following]
+The fields are defined as follows:
 
-The PLUS header appears on each packet. It has the following fields:
+[EDITOR'S NOTE todo, prosify]
 
 - magic: "compatible" with QUIC version number, must have non-reflectable property identified in SPUD.
-- CID: refer to Connection ID design team output for DTLS/QUIC
+- CAT: note we use this both to identify connections (for fast NAT rebinding) as well as an assocation token. Refer to Connection ID design team output for DTLS/QUIC.
 - PSN: initial chosen randomly, increments by one for each packet sent, including control-only packets and retransmissions.
 - PSE: highest PSN seen when packet sent, for RTT and state establishment
 - flag S: bidirectional stop, see {{bidirectional-stop-signaling}}
@@ -137,47 +120,47 @@ The PLUS header appears on each packet. It has the following fields:
 
 ## Measurement and Diagnosis using the Basic Header
 
-[EDITOR'S NOTE: explain how to measure RTT and loss using CID/PSN/PSE. note that PSN increments on 
+[EDITOR'S NOTE: explain how to measure RTT and loss using CID/PSN/PSE. note that PSN increments on every packet.]
 
 ## On-Path State Maintenance using the Basic Header
 
-[EDITOR'S NOTE: note rough TCP-equivalence of this state machine. note that CID binds on the first packet seen.]
+[EDITOR'S NOTE: note rough TCP-equivalence of this state machine.]
 
 ~~~~~~~~~~~~~
     `- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'
     `                        +============+                       '
-    `                       /              \    TO_IDLE           '
-  +-----------+----------->(      zero      )<---------+          '
-  ^ `         ^             \              /            \         '
-  | ` TO_IDLE |              +============+              \        '
-  | `          \   blank a->b /           \ basic a->b   /        '
-  | `           \            V             V            /         '
-  | `            +============+  basic    +============+          '
-  | `        +->/              \-------->/              \<-+      '
-  | `  blank | (  anon-uniflow  ) a->b  (  plus-uniflow  ) | any  '
-  | `   a->b +--\              /         \              /--+ a->b '
-  | `            +============+           +============+          '
-  | `- - - - - - - - - - - - \ basic b->a /- - - - - \ - - - - - -'
-  |                           V          V            \
-  | TO_IDLE                  +============+            \
-  +<------------------------/              \ wrong CID  \
-  |                        (  associating   )------------+
-  |                         \              /              \
-  | TO_ASSOCIATED            +============+                |
-  +<-----------------------+        | basic a->b           |
-  |                         \       V                      |
-  |                          +============+                |
-  |                      +->/              \   wrong CID   |
-  |            any a<->b | (   associated   )--------------+
-  |                      +--\              /               |
-  | TO_ASSOCIATED            +============+                |
-  +<-----------------+        | stop y->z                  |
-  |                   \       V                            V
-  |                    +============+                +============+
-  |                +->/              \  wrong CID   /              \
-  |      any a<->b | (    stopping    )----------->(    cid-fail    )
-  |                +--\              /              \              /
-  | TO_STOPWAIT        +============+                +============+
+    `                       /              \                      '
+  +----------------------->(      zero      )<-+                  '
+  ^ `                       \              /   |                  '
+  | `                        +============+    |                  '
+  | `                        a->b  |           | TO_IDLE          '
+  | `                              V           |                  '
+  | `                        +============+    |                  '
+  | `                    +->/              \   |                  '
+  | `               a->b | (    uniflow     )--+                  '
+  | `                    +--\              /                      '
+  | `                        +============+                       '
+  | `- - - - - - - - - - - - - - - | b->a  - - - - - - - - - - - -'
+  |                                V
+  | TO_IDLE                  +============+  
+  +<------------------------/              \ 
+  |                        (  associating   )
+  |                         \              / 
+  | TO_ASSOCIATED            +============+  
+  +<-----------------------+        | a->b
+  |                         \       V       
+  |                          +============+ 
+  |                      +->/              \
+  |                a<->b | (   associated   )
+  |                      +--\              /
+  | TO_ASSOCIATED            +============+ 
+  +<-----------------+        | stop y->z   
+  |                   \       V             
+  |                    +============+  
+  |                +->/              \ 
+  |      any a<->b | (    stopping    )
+  |                +--\              /      
+  | TO_STOPWAIT        +============+       
   +------------+        | stop z->y
                 \       V
                  +============+
@@ -188,35 +171,6 @@ The PLUS header appears on each packet. It has the following fields:
 ~~~~~~~~~~~~~
 {: #fig-states title="Transport-independent state machine as implemented by PLUS"}
 
-here's the old one
-
-~~~~~~~~~~~~~
-      .- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -.
-      '    +==============+    pkt(s->d)    +==========+              '
-      '   //              \\-------------->/            \--+          '
-      '  ((      zero      ))             (    uniflow   ) |pkt(s->d) '
-      '   \\              //<--------------\            /<-+          '
-      '    +==============+  TO_IDLE/close  +==========+              '
-      '- - -^- - -  ^ - ^  - - - - - - - - - - - - - -|- - - - - - - -'
-            |        \   \                            |  association
- TO_CLOSING |         \   \                           V  signal
-      +==========+     \   \       TO_IDLE       +==========+  
-     /            \     \   +-------------------/            \--+ 
-    (  closewait   )     \   TO_ASSOCIATED     (  associating ) | pkt
-     \            /       +----------------+    \            /<-+(s->d)
-      +==========+                         |     +==========+  
-            ^                              |           |
-            |     +==========+       +==========+      |  
-     close  |    /            \     /            \     |  confirmation
-    signal  |   (    closing   )   (  associated  )    |  signal
-            +----\            /<----\            /<----+
-                  +==========+      +==========+  
-                                      |      ^
-                                      +------+
-                                     pkt(s<->d)
-    
-~~~~~~~~~~~~~
-{: #fig-oldstates title="Old transport-independent state machine"}
 
 ## Bidirectional Stop Signaling
 
