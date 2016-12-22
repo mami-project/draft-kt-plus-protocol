@@ -211,13 +211,15 @@ The basic header provides all the signals necessary to drive the transport-indep
 ~~~~~~~~~~~~~
 {: #fig-states title="Transport-independent state machine as implemented by PLUS"}
 
-[EDITOR'S NOTE: TODO: map to signal names in plus-statefulness. then explain each concrete state transition.]
+[EDITOR'S NOTE: TODO: map to signal names in plus-statefulness. then explain each concrete state transition. can borrow text from -statefulness]
 
 ## Bidirectional Stop Signaling
 
-[EDITOR'S NOTE: describe bidirectional stop signaling and explain why it works.]
+[EDITOR'S NOTE: describe bidirectional stop signaling and explain why it works. can borrow text from -statefulness.]
 
 # Path Communication: Extended Header {#extended-header}
+
+[EDITOR'S NOTE: frontmatter]
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -315,28 +317,31 @@ D10xxx six-byte value (eight possible medium signals per direction)
 D110xx variable-length value (four possible huge signals per direction)
 D1110x reserved
 
-## Two-byte Path to Receiver signals 
+## Path to Receiver Signals
 
 (Codepoints to be assigned)
 
-- Path MTU accumulator. Two bytes of value containing the accumulated path MTU, measured in bytes, initialized to the sender's MTU by the sender. A PLUS-aware forwarding device on path receiving this value MUST fill the minimum of the recieved value and the MTU of the next hop into this field.
-- Path state timeout accumulator. Two bytes of value, unsigned 16-bit integer timeout in seconds, initialized to 65535 (max timeout). A PLUS-aware state-keeping device on path that will time out state MUST fill the minimum of the received value and its current timeout in seconds into this field.
-- Path rate intent accumulator. (Define how this works: logarithmic scaled value for bandwidth demand?) 
+- Path MTU accumulator. Two bytes of value containing the accumulated path
+  MTU, measured in bytes, initialized to the sender's MTU by the sender. A
+  PLUS-aware forwarding device on path receiving this value MUST fill the
+  minimum of the recieved value and the MTU of the next hop into this field.
 
-# Six-byte Path to Receiver Signals
+- Path state timeout accumulator. Two bytes of value, unsigned 16-bit integer
+  timeout in seconds, initialized to 65535 (max timeout). A PLUS-aware 
+  state-keeping device on path that will time out state MUST fill the minimum 
+  of the received value and its current timeout in seconds into this field.
 
-(Codepoints to be assigned)
+- Path rate intent accumulator. (Define how this works: logarithmic scaled
+  value for bandwidth demand?)
 
-- Path trace accumulator, similar to the Path Changes mechanism in section 4.3 of {{IPIM}}.
+- Path trace accumulator, similar to the Path Changes mechanism in section 4.3
+  of {{IPIM}}.
 
-## Two-byte Sender to Path signals
+## Sender to Path signals
 
 (Codepoints to be assigned)
 
 - Sender rate intent. Two bytes of value. (Define how this works: logarithmic scaled value for bandwidth demand?)
-
-## Six-byte Sender to Path signals
-
 - Timestamp. Six bytes of value; should include deltas as in section 4.1.2 of {{IPIM}}. May need to split echo/delta into a separate signal?
 
 ## Integrity protection
