@@ -37,6 +37,7 @@ informative:
   I-D.hardie-path-signals:
   I-D.trammell-plus-abstract-mech:
   I-D.trammell-plus-statefulness:
+  I-D.ietf-quic-transport:
 
   IPIM:
     title: In-Protocol Internet Measurement
@@ -74,9 +75,16 @@ using the mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 
 [EDITOR'S NOTE: do we need this? 2119 language?]
 
-# Basic Headers
+# State Maintenance and Measurement: Basic Header {#basic-header}
 
-Every packet in each direction of a flow using PLUS MUST carry either a PLUS basic or PLUS extended header. The PLUS basic header supports multiplexing using a connection token; basic state maintenance using association/confirmation signals, packet serial numbers, and a two-way stop signal; and basic measurability using packet serial number echo. The format of the basic header, together with the UDP header, is shown in {{fig-header-basic}}
+Every packet in each direction of a flow using PLUS MUST carry either a PLUS
+basic or PLUS extended header. The PLUS basic header supports multiplexing
+using a connection token; basic state maintenance using association and
+confirmation signals, packet serial numbers, and a two-way stop signal; and
+basic measurability using packet serial number echo. The format of the basic
+header, together with the UDP header, is shown in {{fig-header-basic}}.
+
+The extended header is defined in {{extended-header}}.
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -86,7 +94,7 @@ Every packet in each direction of a flow using PLUS MUST carry either a PLUS bas
 +--------------------------------------------------------------+
 |       UDP length             |      UDP checksum             |
 +--------------------------------------------------------------+
-|                  version / magic number                      |
+|                            magic                             |
 +--------------------------------------------------------------+
 |                                                              |
 +              connection/association token CAT                +
@@ -95,36 +103,75 @@ Every packet in each direction of a flow using PLUS MUST carry either a PLUS bas
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+-+-+------+-----------------------------------------------+
-|S|0|L|R| ign  |                                               \
-+-+-+-+-+------+                                               /
++-+-+-+-+-------+-----------------------------------------------+
+|S|0|L|R|  ign  |                                              \
++-+-+-+-+-------+                                              /
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
 ~~~~~~~~~~~~~
 {: #fig-header-basic title="PLUS header with basic exposure"}
 
-The fields are defined as follows:
+Fields are encoded in network byte order and are defined as follows:
 
-[EDITOR'S NOTE todo, prosify]
+- magic: A 32-bit number identifying this packet as carrying a PLUS header.
+  This magic number is chosen to avoid collision with possible values of the
+  first four bytes of widely deployed protocols on UDP. Should the QUIC 
+  {{I-D.ietf-quic-transport}} header be defined to place the version number
+  in the first four bytes of the packet, this number should be compatible with
+  the QUIC version numbering scheme.
 
-- magic: "compatible" with QUIC version number, must have non-reflectable property identified in SPUD.
-- CAT: note we use this both to identify connections (for fast NAT rebinding) as well as an assocation token. Refer to Connection ID design team output for DTLS/QUIC.
-- PSN: initial chosen randomly, increments by one for each packet sent, including control-only packets and retransmissions.
-- PSE: highest PSN seen when packet sent, for RTT and state establishment
-- flag S: bidirectional stop, see {{bidirectional-stop-signaling}}
-- flag L: if set, packet is latency sensitive and prefers drop to delay
-- flag R: if set, packet is not sensitive to reordering, and may be freely reordered [EDITOR'S NOTE: how does this interact with PSN/PSE?]
-- ignored flags: reserved for use by overlying transport protocol
-- PCF: see definition in {{path-communication-field}} 
+- Connection/Association Token (CAT): A 64-bit token identifying this 
+  association. The CAT should be chosen randomly by the connection initiator. 
+  The CAT performs two functions in the PLUS header:
+
+    - Multiplexing: PLUS packets on the same 5-tuple with a different CAT value 
+      are taken to belong to a separate flow, with completely separate
+      state.
+
+    - Rebinding: A PLUS packet sharing one endpoint (source address/port 
+      pair, or destination address/port pair) and the CAT with an existing 
+      flow is taken to belong to that flow, since the other endpoint 
+      identifier has changed due to a mobility event or address translation 
+      change.
+
+- Packet Serial Number (PSN): A 32-bit serial number for this packet. The
+  first PSN for each direction in a flow is chosen randomly, and subsequent
+  packets increment the PSN by one. The PSN wraps around; i.e. the PSN after
+  0xffffffff is 0x00000000.
+
+- Packet Serial Echo (PSE): The highest PSN (wrapping around) seen by the
+  sender in the opposite direction before this packet was sent.
+
+- Flags byte: eight bits carrying additional flags:
+
+    - Stop flag (S): Packet carries a stop or stop confirmation when set.
+    - Zero: Bit 6 is set to zero in packets with a basic header.
+    - LoLa flag (L): Packet is latency sensitive and prefers drop to delay when set.
+    - RoI flag (R): Packet is not sensitive to reordering when set.
+    - Ignored: Bits 0-3 are ignored, and available for use by the overlying transport.
 
 ## Measurement and Diagnosis using the Basic Header
 
-[EDITOR'S NOTE: explain how to measure RTT and loss using CID/PSN/PSE. note that PSN increments on every packet.]
+The basic header trivially supports passive two-way delay measurement as well
+as partial loss estimation at a single observation point.
+
+To calculate two-way delay, an observation point calculates the delay between
+seeing a PSN and a corresponding PSE in each direction, then adds the delays
+from each direction together. The fact that the PSN increments by one for
+every packet, including packets carrying retransmitted data or only control
+traffic, makes this measurement much simpler than the equivalent measurement
+using TCP sequence and acknowledgment numbers.
+
+To calculate loss upstream from an observation point in each direction, the
+observation point simply counts skips in the PSN number space. Since PLUS does
+not expose information about retransmissions (and, indeed, may not even carry
+a transport that uses retransmission for loss recovery), loss downstream from
+the observation point cannot be observed.
 
 ## On-Path State Maintenance using the Basic Header
 
-[EDITOR'S NOTE: note rough TCP-equivalence of this state machine.]
+The basic header provides all the signals necessary to drive the transport-independent state machine in {{I-D.trammell-plus-statefulness}}.
 
 ~~~~~~~~~~~~~
     `- - - - - - - - - - - - - - - - - - - - - - - - - - - -'
@@ -151,25 +198,26 @@ The fields are defined as follows:
   |                           V             
   |                    +============+  
   | TO_ASSOCIATED     /              \<-+     
-  +<-----------------(    stopping    ) | a<->b
+  +<-----------------(   half-close   ) | a<->b
   |                   \              /--+          
   |                   +============+       
   |                    | stop z->y
   |                    V
   |              +============+
   | TO_STOPWAIT /              \
-  +------------(   stop-wait    )
+  +------------(    closing     )
                 \              /
                  +============+
 ~~~~~~~~~~~~~
 {: #fig-states title="Transport-independent state machine as implemented by PLUS"}
 
+[EDITOR'S NOTE: TODO: map to signal names in plus-statefulness. then explain each concrete state transition.]
 
 ## Bidirectional Stop Signaling
 
 [EDITOR'S NOTE: describe bidirectional stop signaling and explain why it works.]
 
-# Path Communication Field
+# Path Communication: Extended Header {#extended-header}
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -188,9 +236,9 @@ The fields are defined as follows:
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+-+-+------+---+-+-+-------+-------------------------------+
-|S|0|L|R| ign  |rsv|D|0|   T   |            PCF value          |
-+-+-+-+-+------+---+-+-+-------+-------------------------------+
++-+-+-+-+-------+---+-+-+-------+------------------------------+
+|S|0|L|R|  ign  |rsv|D|0|   T   |           PCF value          |
++-+-+-+-+-------+---+-+-+-------+------------------------------+
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
@@ -214,9 +262,9 @@ The fields are defined as follows:
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+-+-+------+---+-+-+-+-----+-------------------------------+
-|S|0|L|R| ign  |rsv|D|1|0|  T  |          PCF value            |
-+-+-+-+-+------+---+-+-+-+-----+                               |
++-+-+-+-+-------+---+-+-+-+-----+------------------------------+
+|S|0|L|R|  ign  |rsv|D|1|0|  T  |         PCF value            |
++-+-+-+-+-------+---+-+-+-+-----+                              |
 |                                                              |
 +--------------------------------------------------------------+
 /                                                              \
@@ -242,9 +290,9 @@ The fields are defined as follows:
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+-+-+------+---+-+-+-+-+---+---------------+---------------+
-|S|0|L|R| ign  |rsv|D|1|1|0| T |  PCF length   |               /
-+-+-+-+-+------+---+-+-+-+-+---+---------------+               \
++-+-+-+-+-------+---+-+-+-+-+---+---------------+--------------+
+|S|0|L|R|  ign  |rsv|D|1|1|0| T |  PCF length   |              /
++-+-+-+-+-------+---+-+-+-+-+---+---------------+              \
 \                                                              /
 /                    PCF value (varlen)                        \
 \                                                              /
