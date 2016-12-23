@@ -691,7 +691,8 @@ Internet-Draft                PLUS Protocol                December 2016
               December 2016.
 
    [IPIM]     Allman, M., Beverly, R., and B. Trammell, "In-Protocol
-              Internet Measurement (arXiv preprint 1612.02902)", n.d..
+              Internet Measurement (arXiv preprint 1612.02902)",
+              December 2016.
 
    [RFC0793]  Postel, J., "Transmission Control Protocol", STD 7,
               RFC 793, DOI 10.17487/RFC0793, September 1981,
@@ -715,6 +716,20 @@ Internet-Draft                PLUS Protocol                December 2016
 
 Authors' Addresses
 
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind     Expires June 26, 2017                [Page 13]
+
+Internet-Draft                PLUS Protocol                December 2016
+
+
    Brian Trammell
    ETH Zurich
    Gloriastrasse 35
@@ -724,12 +739,6 @@ Authors' Addresses
    Email: ietf@trammell.ch
 
 
-
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 13]
-
-Internet-Draft                PLUS Protocol                December 2016
-
-
    Mirja Kuehlewind
    ETH Zurich
    Gloriastrasse 35
@@ -737,15 +746,6 @@ Internet-Draft                PLUS Protocol                December 2016
    Switzerland
 
    Email: mirja.kuehlewind@tik.ee.ethz.ch
-
-
-
-
-
-
-
-
-
 
 
 
