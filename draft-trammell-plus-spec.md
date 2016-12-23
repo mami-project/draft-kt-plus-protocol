@@ -167,6 +167,10 @@ Fields are encoded in network byte order and are defined as follows:
     - RoI flag (R): Packet is not sensitive to reordering when set.
     - Ignored: Bits 0-3 are ignored, and available for use by the overlying transport.
 
+Since PLUS is designed to be used for UDP-encapsulated, encrypted transport protocols, overlying transports are presumed to provide encryption and integrity protection for their own headers. For the sake of efficiency, it is also assumed that this integrity protection can be extended to the bits in the PLUS Basic Header.
+
+## Sender Behavior
+
 When a sender has a packet ready to send using PLUS, it determines the values
 in the Basic Header as follows:
 
@@ -200,8 +204,7 @@ in the Basic Header as follows:
 - The overlying transport may freely use the four ignored flag bits for its
   own purposes.
 
-It is presumed that the overlying transport provides integrity protection for
-the bits in the PLUS Basic Header.
+## Receiver Behavior
 
 When a receiver receives a packet containing a PLUS Basic Header, it processes
 the values in the Basic Header as follows:
@@ -213,9 +216,6 @@ the values in the Basic Header as follows:
   checks SHOULD be dropped, but MAY be further analyzed by the receiver to
   determine the likely cause of verification failure; reaction to the failure is
   transport and implementation specific.
-
-- It MAY verify that the PSN is sensible for the given flow, given information
-  from the overlying transport about packets likely to be received.
 
 - It stores the PSN to be sent as the PSE on the the next packet it sends in
   the opposite direction.
@@ -343,7 +343,12 @@ the observation point cannot be observed.
 Additional facilities for communicating with on-path devices under endpoint
 control are provided by the PLUS Extended Header. The extended header shares
 the layout of its first 21 bytes with the PLUS Basic Header, except the
-Extended Header bit (0x40 on byte 20) is set. 
+Extended Header bit (0x40 on byte 20) is set. As with the Basic Header,
+overlying transports are presumed to provide encryption and integrity
+protection for the PLUS Extended Header.
+
+ is presumed that the overlying transport provides integrity protection for
+the bits in the PLUS Basic Header.
 
 The Extended Header shown in {{fig-header-pcf}} provides for a single Sender
 to Path or Path to Receiver information element, as in 
@@ -396,7 +401,7 @@ information about itself or the flow to the path. Path to Receiver signals are
 treated specially by header integrity protection, as their values, but not
 length or type, may be changed by devices on path: the value of a given path-
 to-receiver signal is assumed to be an appropriately sized array of zero bytes
-by the integrity protection algorithm.
+by the integrity protection facility.
 
 Path to Receiver signals generally take the form of accumulators: initialized
 to some value by the sender, and subject to some aggregation function by each
