@@ -74,12 +74,12 @@ Table of Contents
      2.4.  Measurement and Diagnosis using the Basic Header  . . . .   9
    3.  Path Communication: Extended Header . . . . . . . . . . . . .   9
      3.1.  Path to Receiver Signals  . . . . . . . . . . . . . . . .  11
-     3.2.  Sender to Path signals  . . . . . . . . . . . . . . . . .  12
+     3.2.  Sender to Path signals  . . . . . . . . . . . . . . . . .  11
    4.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
    5.  Security Considerations . . . . . . . . . . . . . . . . . . .  12
    6.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  12
-   7.  Informative References  . . . . . . . . . . . . . . . . . . .  13
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
+   7.  Informative References  . . . . . . . . . . . . . . . . . . .  12
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  13
 
 1.  Introduction
 
@@ -485,9 +485,6 @@ Internet-Draft                  PLUS Spec                  December 2016
    provide encryption and integrity protection for the PLUS Extended
    Header.
 
-   is presumed that the overlying transport provides integrity
-   protection for the bits in the PLUS Basic Header.
-
    The Extended Header shown in Figure 3 provides for a single Sender to
    Path or Path to Receiver information element, as in
    [I-D.trammell-plus-abstract-mech], to appear on the packet, within a
@@ -498,6 +495,9 @@ Internet-Draft                  PLUS Spec                  December 2016
    Further details of PCF encoding are not yet defined in this revision
    of the specification; the remainder of this section discusses the
    types of information elements to be supported.  The exact encoding of
+   PCF type and value information are to be derived from an analysis of
+   the requirements of these Information Elements.
+
 
 
 
@@ -505,9 +505,6 @@ Trammell & Kuehlewind     Expires June 26, 2017                 [Page 9]
 
 Internet-Draft                  PLUS Spec                  December 2016
 
-
-   PCF type and value information are to be derived from an analysis of
-   the requirements of these Information Elements.
 
      3                   2                   1
    1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
@@ -553,6 +550,9 @@ Internet-Draft                  PLUS Spec                  December 2016
    initialized to some value by the sender, and subject to some
    aggregation function by each on-path device that understands them.
    Sender to Path signals are generally used to expose information about
+   the traffic for measurement or diagnostic purposes.  In any case, the
+   information sent and received is to be treated as advisory only.
+
 
 
 
@@ -561,9 +561,6 @@ Trammell & Kuehlewind     Expires June 26, 2017                [Page 10]
 
 Internet-Draft                  PLUS Spec                  December 2016
 
-
-   the traffic for measurement or diagnostic purposes.  In any case, the
-   information sent and received is to be treated as advisory only.
 
 3.1.  Path to Receiver Signals
 
@@ -608,8 +605,11 @@ Internet-Draft                  PLUS Spec                  December 2016
       the receiver with the same accumulated value, and changes to the
       set of devices on path can be detected by the receiver.
 
+3.2.  Sender to Path signals
 
-
+   We have identified the following sender to path signals as
+   potentially useful for measurement and diagnostic purposes.  As
+   above, these signals are advisory only.
 
 
 
@@ -617,12 +617,6 @@ Trammell & Kuehlewind     Expires June 26, 2017                [Page 11]
 
 Internet-Draft                  PLUS Spec                  December 2016
 
-
-3.2.  Sender to Path signals
-
-   We have identified the following sender to path signals as
-   potentially useful for measurement and diagnostic purposes.  As
-   above, these signals are advisory only.
 
    o  Sender rate intent.  For flows with a constant sending rate, this
       signal allows the bitrate to be exposed to devices along the path.
@@ -663,6 +657,12 @@ Internet-Draft                  PLUS Spec                  December 2016
    for Education, Research, and Innovation under contract no. 15.0268.
    This support does not imply endorsement.
 
+7.  Informative References
+
+   [I-D.hardie-path-signals]
+              Hardie, T., "Path signals", draft-hardie-path-signals-00
+              (work in progress), October 2016.
+
 
 
 
@@ -673,12 +673,6 @@ Trammell & Kuehlewind     Expires June 26, 2017                [Page 12]
 
 Internet-Draft                  PLUS Spec                  December 2016
 
-
-7.  Informative References
-
-   [I-D.hardie-path-signals]
-              Hardie, T., "Path signals", draft-hardie-path-signals-00
-              (work in progress), October 2016.
 
    [I-D.ietf-quic-transport]
               Iyengar, J. and M. Thomson, "QUIC: A UDP-Based Multiplexed
@@ -720,6 +714,12 @@ Internet-Draft                  PLUS Spec                  December 2016
               for Consent Freshness", RFC 7675, DOI 10.17487/RFC7675,
               October 2015, <http://www.rfc-editor.org/info/rfc7675>.
 
+Authors' Addresses
+
+
+
+
+
 
 
 
@@ -729,8 +729,6 @@ Trammell & Kuehlewind     Expires June 26, 2017                [Page 13]
 
 Internet-Draft                  PLUS Spec                  December 2016
 
-
-Authors' Addresses
 
    Brian Trammell
    ETH Zurich
@@ -748,6 +746,8 @@ Authors' Addresses
    Switzerland
 
    Email: mirja.kuehlewind@tik.ee.ethz.ch
+
+
 
 
 
