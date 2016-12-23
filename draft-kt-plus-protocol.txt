@@ -691,7 +691,7 @@ Internet-Draft                PLUS Protocol                December 2016
               December 2016.
 
    [IPIM]     Allman, M., Beverly, R., and B. Trammell, "In-Protocol
-              Internet Measurement", n.d..
+              Internet Measurement (arXiv preprint 1612.02902)", n.d..
 
    [RFC0793]  Postel, J., "Transmission Control Protocol", STD 7,
               RFC 793, DOI 10.17487/RFC0793, September 1981,
