@@ -41,7 +41,7 @@ informative:
   I-D.ietf-quic-transport:
 
   IPIM:
-    title: In-Protocol Internet Measurement
+    title: In-Protocol Internet Measurement (arXiv preprint 1612.02902)
     author:
       - 
         ins: M. Allman
