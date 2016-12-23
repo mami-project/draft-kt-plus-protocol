@@ -33,6 +33,7 @@ informative:
   RFC0793:
   RFC2474:
   RFC7675:
+  RFC7323:
 
   I-D.hardie-path-signals:
   I-D.trammell-plus-abstract-mech:
@@ -50,11 +51,6 @@ informative:
         ins: B. Trammell
     url: https://arxiv.org/abs/1612.02902
 
-
-normative:
-  RFC5103:
-  RFC7011:
-  RFC7398:
 
 --- abstract
 
