@@ -1,7 +1,7 @@
 ---
-title: Path Layer UDP Substrate Protocol Specification
-abbrev: PLUS Protocol
-docname: draft-kt-plus-protocol-00
+title: Path Layer UDP Substrate Specification
+abbrev: PLUS Spec
+docname: draft-trammell-plus-spec-00
 date:
 category: exp
 
@@ -55,12 +55,12 @@ informative:
 
 --- abstract
 
-This document specifies a Path Layer UDP Substrate (PLUS) protocol for
-providing a common wire image for encrypted transport protocols carried over
-UDP. The base PLUS header carries information for driving a minimal state
-machine at middleboxes described in {{I-D.trammell-plus-statefulness}}, and
-provides optional exposure of additional information to devices along the path
-using the mechanism described in {{I-D.trammell-plus-abstract-mech}}.
+This document specifies a common Path Layer UDP Substrate (PLUS) wire image
+for encrypted transport protocols carried over UDP. The base PLUS header
+carries information for driving a minimal state machine at middleboxes
+described in {{I-D.trammell-plus-statefulness}}, and provides optional
+exposure of additional information to devices along the path using the
+mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 
 --- middle
 
@@ -76,18 +76,19 @@ mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 As discussed in {{I-D.hardie-path-signals}}, basic information about flows
 currently exposed by TCP are missing from transport protocols that encrypt
 their headers. Given the ossification of protocol wire images due to the
-widespread deployment of protocol-inspecting and -manipulating functions in
-the network, this header encryption is necessary to support transport protocol
+widespread deployment of stateful network devices that rely on header
+inspection, this header encryption is necessary to support transport protocol
 evolution. However, the loss of basic information for on-path state
 maintenance as well as network performance measurement, diagnostics, and
 troubleshooting via header encryption makes network management more difficult.
-The PLUS protocol described in this document aims to mitigate this difficulty, allowing deployment of encrypted protocols without loss of essential in-network functionality.
+The PLUS wire image defined by this document aims to mitigate this difficulty,
+allowing deployment of encrypted protocols without loss of essential in-
+network functionality.
 
-This protocol is intended primarily for state maintenance and measurement; the principles of measurement and primitives we aim to support are drawn from recent work on explicit measurability in protocol design {{IPIM}}.
-
-# Terminology
-
-[EDITOR'S NOTE: define terminology as necessary.]
+This wire image is intended primarily to support state maintenance and
+measurement; the principles of measurement and primitives we aim to support
+are drawn from recent work on explicit measurability in protocol design
+{{IPIM}}.
 
 # State Maintenance and Measurement: Basic Header {#basic-header}
 
@@ -360,8 +361,7 @@ abstract-mech}}, to appear on the packet, within a Path Communication Field.
 PCF Type information is carried in Byte 21 of the header, with the length of
 the PCF value to be determined by its type.
 
-Further details of PCF encoding are not yet defined in this revision of the
-protocol specification; the remainder of this section discusses the types of
+Further details of PCF encoding are not yet defined in this revision of the specification; the remainder of this section discusses the types of
 information elements to be supported. The exact encoding of PCF type and value
 information are to be derived from an analysis of the requirements of these
 Information Elements.
