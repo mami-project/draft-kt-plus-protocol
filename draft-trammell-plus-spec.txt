@@ -73,8 +73,7 @@ Table of Contents
        2.3.3.  State Rebinding . . . . . . . . . . . . . . . . . . .   8
      2.4.  Measurement and Diagnosis using the Basic Header  . . . .   9
    3.  Path Communication: Extended Header . . . . . . . . . . . . .   9
-     3.1.  Sender to Path signals  . . . . . . . . . . . . . . . . .  11
-     3.2.  Path to Receiver Signals  . . . . . . . . . . . . . . . .  11
+     3.1.  Measurement and Diagnostics using the Extended Header . .  11
    4.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
    5.  Security Considerations . . . . . . . . . . . . . . . . . . .  12
    6.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  12
@@ -106,6 +105,7 @@ Table of Contents
 
    This wire image is intended primarily to support state maintenance
    and measurement; the principles of measurement and primitives we aim
+
 
 
 
@@ -526,7 +526,7 @@ Internet-Draft                  PLUS Spec                  December 2016
    |S|1|L|R|  ign  |    PCF Type   |                              /
    +-+-+-+-+-------+---------------+                              \
    \                                                              /
-   /                 PCF value (variable-length?)                 \
+   /                 PCF value (variable-length)                  \
    \                                                              /
    +--------------------------------------------------------------+
    /                                                              \
@@ -562,25 +562,12 @@ Trammell & Kuehlewind     Expires June 26, 2017                [Page 10]
 Internet-Draft                  PLUS Spec                  December 2016
 
 
-3.1.  Sender to Path signals
+3.1.  Measurement and Diagnostics using the Extended Header
 
    We have identified the following sender to path signals as
    potentially useful for measurement and diagnostic purposes.  These
    signals are advisory only, and should not be presumed by either the
    endpoints or devices along the path to affect forwarding behavior.
-
-   o  Sender rate intent.  For flows with a constant sending rate, this
-      signal allows the bitrate to be exposed to devices along the path.
-
-   o  Sender volume intent.  For flows containing a known amount of
-      data, this signal allows the total volume to be exposed to devices
-      along the path, allowing separation of short-lived small flows
-      from longer-lived large ones.
-
-   o  Sender keepalive interval intent.  For flows using a keepalive
-      timer to refresh state along the path, this signal allows the
-      sender to expose that keepalive interval to those devices, which
-      can be used for state timeout debugging and tuning.
 
    o  Timestamp and timestamp echo.  Similar to TCP timestamps in
       [RFC7323], also encoding a delta between receipt of last timestamp
@@ -589,8 +576,6 @@ Internet-Draft                  PLUS Spec                  December 2016
       is less necessary for RTT measurement of one-sided flows than it
       is in TCP, due to the properties of the PSN and PSE values in the
       Basic Header.
-
-3.2.  Path to Receiver Signals
 
    We have identified the following path to receiver signals as
    potentially useful.  Note that accumulated values for use at the
@@ -610,14 +595,6 @@ Internet-Draft                  PLUS Spec                  December 2016
       timeouts from PLUS-aware devices.  It is initialized to a maximum
       ("no information") value by the sender.  A PLUS-aware forwarding
       device on path receiving this value fills in the minimum of the
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 11]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
-
       received value and the configured timeout for the flow's present
       state into this field.
 
@@ -633,6 +610,14 @@ Internet-Draft                  PLUS Spec                  December 2016
       in section 4.3 of [IPIM].  The sender initializes the value to a
       value chosen randomly for the flow; all packets in the flow using
       path trace accumulator must use the same initial value.  A PLUS-
+
+
+
+Trammell & Kuehlewind     Expires June 26, 2017                [Page 11]
+
+Internet-Draft                  PLUS Spec                  December 2016
+
+
       aware forwarding device on path receiving this value fills in the
       result of XORing the received value with a randomly chosen device
       identifier, which it must use for all path trace accumulator
@@ -665,15 +650,6 @@ Internet-Draft                  PLUS Spec                  December 2016
               Hardie, T., "Path signals", draft-hardie-path-signals-00
               (work in progress), October 2016.
 
-
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 12]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
-
    [I-D.ietf-quic-transport]
               Iyengar, J. and M. Thomson, "QUIC: A UDP-Based Multiplexed
               and Secure Transport", draft-ietf-quic-transport-00 (work
@@ -689,6 +665,14 @@ Internet-Draft                  PLUS Spec                  December 2016
               "Transport-Independent Path Layer State Management",
               draft-trammell-plus-statefulness-02 (work in progress),
               December 2016.
+
+
+
+
+Trammell & Kuehlewind     Expires June 26, 2017                [Page 12]
+
+Internet-Draft                  PLUS Spec                  December 2016
+
 
    [IPIM]     Allman, M., Beverly, R., and B. Trammell, "In-Protocol
               Internet Measurement (arXiv preprint 1612.02902)",
@@ -716,20 +700,6 @@ Internet-Draft                  PLUS Spec                  December 2016
 
 Authors' Addresses
 
-
-
-
-
-
-
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 13]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
-
    Brian Trammell
    ETH Zurich
    Gloriastrasse 35
@@ -755,30 +725,4 @@ Internet-Draft                  PLUS Spec                  December 2016
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 14]
+Trammell & Kuehlewind     Expires June 26, 2017                [Page 13]

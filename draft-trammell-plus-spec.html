@@ -287,8 +287,7 @@ address {
 <link href="#rfc.section.2.3.3" rel="Chapter" title="2.3.3 State Rebinding"/>
 <link href="#rfc.section.2.4" rel="Chapter" title="2.4 Measurement and Diagnosis using the Basic Header"/>
 <link href="#rfc.section.3" rel="Chapter" title="3 Path Communication: Extended Header"/>
-<link href="#rfc.section.3.1" rel="Chapter" title="3.1 Sender to Path signals"/>
-<link href="#rfc.section.3.2" rel="Chapter" title="3.2 Path to Receiver Signals"/>
+<link href="#rfc.section.3.1" rel="Chapter" title="3.1 Measurement and Diagnostics using the Extended Header"/>
 <link href="#rfc.section.4" rel="Chapter" title="4 IANA Considerations"/>
 <link href="#rfc.section.5" rel="Chapter" title="5 Security Considerations"/>
 <link href="#rfc.section.6" rel="Chapter" title="6 Acknowledgments"/>
@@ -368,8 +367,7 @@ address {
 <li>2.3.3.   <a href="#rfc.section.2.3.3">State Rebinding</a></li>
 </ul><li>2.4.   <a href="#rfc.section.2.4">Measurement and Diagnosis using the Basic Header</a></li>
 </ul><li>3.   <a href="#rfc.section.3">Path Communication: Extended Header</a></li>
-<ul><li>3.1.   <a href="#rfc.section.3.1">Sender to Path signals</a></li>
-<li>3.2.   <a href="#rfc.section.3.2">Path to Receiver Signals</a></li>
+<ul><li>3.1.   <a href="#rfc.section.3.1">Measurement and Diagnostics using the Extended Header</a></li>
 </ul><li>4.   <a href="#rfc.section.4">IANA Considerations</a></li>
 <li>5.   <a href="#rfc.section.5">Security Considerations</a></li>
 <li>6.   <a href="#rfc.section.6">Acknowledgments</a></li>
@@ -529,7 +527,7 @@ address {
 |S|1|L|R|  ign  |    PCF Type   |                              /
 +-+-+-+-+-------+---------------+                              \
 \                                                              /
-/                 PCF value (variable-length?)                 \
+/                 PCF value (variable-length)                  \
 \                                                              /
 +--------------------------------------------------------------+
 /                                                              \
@@ -539,18 +537,14 @@ address {
 <p class="figure">Figure 3: PLUS extended header (conceptual; details TBD)</p>
 <p id="rfc.section.3.p.4">As described in <a href="#I-D.trammell-plus-abstract-mech">[I-D.trammell-plus-abstract-mech]</a>, there are two types of signals: Path to Receiver signals, which allow devices along the path to provide information about the path or its treatment of the flow to the receiver; and Sender to Path signals, which allow the sender to expose information about itself or the flow to the path. Path to Receiver signals are treated specially by header integrity protection, as their values, but not length or type, may be changed by devices on path: the value of a given path- to-receiver signal is assumed to be an appropriately sized array of zero bytes by the integrity protection facility.</p>
 <p id="rfc.section.3.p.5">Path to Receiver signals generally take the form of accumulators: initialized to some value by the sender, and subject to some aggregation function by each on-path device that understands them. Sender to Path signals are generally used to expose information about the traffic for measurement or diagnostic purposes. In any case, the information sent and received is to be treated as advisory only.</p>
-<h1 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1.</a> <a href="#sender-to-path-signals" id="sender-to-path-signals">Sender to Path signals</a></h1>
+<h1 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1.</a> <a href="#measurement-and-diagnostics-using-the-extended-header" id="measurement-and-diagnostics-using-the-extended-header">Measurement and Diagnostics using the Extended Header</a></h1>
 <p id="rfc.section.3.1.p.1">We have identified the following sender to path signals as potentially useful for measurement and diagnostic purposes. These signals are advisory only, and should not be presumed by either the endpoints or devices along the path to affect forwarding behavior.</p>
 <p/>
 
 <ul>
-  <li>Sender rate intent. For flows with a constant sending rate, this signal allows the bitrate to be exposed to devices along the path.</li>
-  <li>Sender volume intent. For flows containing a known amount of data, this signal allows the total volume to be exposed to devices along the path, allowing separation of short-lived small flows from longer-lived large ones.</li>
-  <li>Sender keepalive interval intent. For flows using a keepalive timer to refresh state along the path, this signal allows the sender to expose that keepalive interval to those devices, which can be used for state timeout debugging and tuning.</li>
   <li>Timestamp and timestamp echo. Similar to TCP timestamps in <a href="#RFC7323">[RFC7323]</a>, also encoding a delta between receipt of last timestamp and transmission of echo as in section 4.1.2 of <a href="#IPIM">[IPIM]</a>. Allows constant-rate clock exposure to devices on path. Note that this is less necessary for RTT measurement of one-sided flows than it is in TCP, due to the properties of the PSN and PSE values in the Basic Header.</li>
 </ul>
-<h1 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2.</a> <a href="#path-to-receiver-signals" id="path-to-receiver-signals">Path to Receiver Signals</a></h1>
-<p id="rfc.section.3.2.p.1">We have identified the following path to receiver signals as potentially useful. Note that accumulated values for use at the sender must be fed back to the sender by the overlying transport, and that the presence of non-PLUS aware devices on path at breaks in MTU mean that the accumulated value can only be used as a hint to processes for measurement and discovery of the accumulated values at the sender.</p>
+<p id="rfc.section.3.1.p.3">We have identified the following path to receiver signals as potentially useful. Note that accumulated values for use at the sender must be fed back to the sender by the overlying transport, and that the presence of non-PLUS aware devices on path at breaks in MTU mean that the accumulated value can only be used as a hint to processes for measurement and discovery of the accumulated values at the sender.</p>
 <p/>
 
 <ul>
