@@ -156,7 +156,7 @@ Fields are encoded in network byte order and are defined as follows:
   first PSN for each direction in a flow is chosen randomly, and subsequent
   packets increment the PSN by one. The PSN wraps around.
 
-- Packet Serial Echo (PSE): The highest PSN (wrapping around) seen by the
+- Packet Serial Echo (PSE): The most recent PSN seen by the
   sender in the opposite direction before this packet was sent.
 
 - Flags byte: eight bits carrying additional flags:
@@ -184,18 +184,12 @@ in the Basic Header as follows:
   setting the PSN to 0x00000000.
 
 - If the packet is the first packet in the flow in this direction, the sender
-  sets the PSE to 0x00000000. Otherwise it sets the PSE to the maximum PSN
-  received in the opposite direction, unless the overlying transport is shutting
-  down the flow. As with PSN, the PSE wraps around: if a PSN greater that
-  0xfffe0000 has been received in the opposite direction, and a PSN less than
-  0x00010000 has been received in the opposite direction, it uses the maximum
-  value in the range 0x00000000 0x0000ffff. If the overlying transport is
-  shutting down the flow and has received a stop signal, it sets the PSE to
-  exactly the PSN on the received stop signal; see {{bidirectional-stop-signaling}} 
-  for details.
+  sets the PSE to 0x00000000. Otherwise it sets the PSE to the PSN of the last
+  packet seen in the opposite direction.
 
-- If the overlying transport is shutting down this flow, the sender sets the S
-  flag; see {{bidirectional-stop-signaling}} for details.
+- If the overlying transport determines that this packet is the last to be
+ sent in this direction, the sender sets the S flag; see
+ {{bidirectional-stop-signaling}} for details.
 
 - If the overlying transport determines that this packet is loss-insensitive
   but latency-sensitive, the sender sets the L flag.
@@ -223,12 +217,8 @@ the values in the Basic Header as follows:
 - It MAY verify that the PSN is sensible for the given flow, given information
   from the overlying transport about packets likely to be received.
 
-- If the PSN is higher than the next PSE to be sent in the opposite direction,
-  subject to wrap as described above, it updates the next PSE to be sent.
-
-- If the S flag is set, it stores the PSN and determines whether to send a
-  stop confirmation signal in a subsequent packet to be sent; see
-  {{bidirectional-stop-signaling}}.
+- It stores the PSN to be sent as the PSE on the the next packet it sends in
+  the opposite direction.
 
 ## On-Path State Maintenance using the Basic Header
 
@@ -295,7 +285,7 @@ timeout interval TO_IDLE.
 Once a flow has moved to the associated state, it will remain in that state
 for a timeout interval TO_ASSOCIATED. The on-path device forwards any packet
 with a PLUS Basic Header in either direction for this flow. It resets the
-TO_ASSOCIATED timer for every packet it forwards without the S flag set.
+TO_ASSOCIATED timer for every packet it forwards in this state.
 
 ### Bidirectional Stop Signaling
 
@@ -356,12 +346,14 @@ the layout of its first 21 bytes with the PLUS Basic Header, except the
 Extended Header bit (0x40 on byte 20) is set. 
 
 The Extended Header shown in {{fig-header-pcf}} provides for a single Sender
-to Path or Path to Receiver information element, as in  {{I-D.trammell-plus-
-abstract-mech}}, to appear on the packet, within a Path Communication Field.
+to Path or Path to Receiver information element, as in 
+{{I-D.trammell-plus-abstract-mech}}, to appear on the packet, 
+within a Path Communication Field.
 PCF Type information is carried in Byte 21 of the header, with the length of
 the PCF value to be determined by its type.
 
-Further details of PCF encoding are not yet defined in this revision of the specification; the remainder of this section discusses the types of
+Further details of PCF encoding are not yet defined in this revision of the
+specification; the remainder of this section discusses the types of
 information elements to be supported. The exact encoding of PCF type and value
 information are to be derived from an analysis of the requirements of these
 Information Elements.
