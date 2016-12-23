@@ -413,6 +413,31 @@ used to expose information about the traffic for measurement or diagnostic
 purposes. In any case, the information sent and received is to be treated as
 advisory only.
 
+## Sender to Path signals
+
+We have identified the following sender to path signals as potentially useful
+for measurement and diagnostic purposes. These signals are advisory only, and
+should not be presumed by either the endpoints or devices along the path to
+affect forwarding behavior.
+
+- Sender rate intent. For flows with a constant sending rate, this signal
+  allows the bitrate to be exposed to devices along the path.
+
+- Sender volume intent. For flows containing a known amount of data, this 
+  signal allows the total volume to be exposed to devices along the path, 
+  allowing separation of short-lived small flows from longer-lived large ones.
+
+- Sender keepalive interval intent. For flows using a keepalive timer to
+  refresh state along the path, this signal allows the sender to expose that
+  keepalive interval to those devices, which can be used for state timeout
+  debugging and tuning.
+
+- Timestamp and timestamp echo. Similar to TCP timestamps in {{RFC7323}}, also
+  encoding a delta between receipt of last timestamp and transmission of echo
+  as in section 4.1.2 of {{IPIM}}. Allows constant-rate clock exposure to devices
+  on path. Note that this is less necessary for RTT measurement of one-sided flows 
+  than it is in TCP, due to the properties of the PSN and PSE values in the Basic Header.
+
 ## Path to Receiver Signals
 
 We have identified the following path to receiver signals as potentially
@@ -450,30 +475,6 @@ values at the sender.
   devices in the same flow therefore arrive at the receiver with the same
   accumulated value, and changes to the set of devices on path can be detected
   by the receiver.
-
-## Sender to Path signals
-
-We have identified the following sender to path signals as potentially useful
-for measurement and diagnostic purposes. As above, these signals are advisory
-only.
-
-- Sender rate intent. For flows with a constant sending rate, this signal
-  allows the bitrate to be exposed to devices along the path.
-
-- Sender volume intent. For flows containing a known amount of data, this 
-  signal allows the total volume to be exposed to devices along the path, 
-  allowing separation of short-lived small flows from longer-lived large ones.
-
-- Sender keepalive interval intent. For flows using a keepalive timer to
-  refresh state along the path, this signal allows the sender to expose that
-  keepalive interval to those devices, which can be used for state timeout
-  debugging and tuning.
-
-- Timestamp and timestamp echo. Similar to TCP timestamps in {{RFC7323}}, also
-  encoding a delta between receipt of last timestamp and transmission of echo
-  as in section 4.1.2 of {{IPIM}}. Allows constant-rate clock exposure to devices
-  on path. Note that this is less necessary for RTT measurement of one-sided flows 
-  than it is in TCP, due to the properties of the PSN and PSE values in the Basic Header.
 
 # IANA Considerations
 
