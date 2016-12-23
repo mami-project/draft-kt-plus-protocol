@@ -167,7 +167,11 @@ Fields are encoded in network byte order and are defined as follows:
     - RoI flag (R): Packet is not sensitive to reordering when set.
     - Ignored: Bits 0-3 are ignored, and available for use by the overlying transport.
 
-Since PLUS is designed to be used for UDP-encapsulated, encrypted transport protocols, overlying transports are presumed to provide encryption and integrity protection for their own headers. For the sake of efficiency, it is also assumed that this integrity protection can be extended to the bits in the PLUS Basic Header.
+Since PLUS is designed to be used for UDP-encapsulated, encrypted transport
+protocols, overlying transports are presumed to provide encryption and
+integrity protection for their own headers. For the sake of efficiency, it is
+also assumed that this integrity protection can be extended to the bits in the
+PLUS Basic Header.
 
 ## Sender Behavior
 
@@ -264,6 +268,8 @@ shown in {{fig-states}}.
 ~~~~~~~~~~~~~
 {: #fig-states title="Transport-independent state machine as implemented by PLUS"}
 
+
+
 ### State Establishment
 
 A PLUS-aware on-path device forwarding a packet with a PLUS Basic Header with
@@ -346,9 +352,6 @@ the layout of its first 21 bytes with the PLUS Basic Header, except the
 Extended Header bit (0x40 on byte 20) is set. As with the Basic Header,
 overlying transports are presumed to provide encryption and integrity
 protection for the PLUS Extended Header.
-
- is presumed that the overlying transport provides integrity protection for
-the bits in the PLUS Basic Header.
 
 The Extended Header shown in {{fig-header-pcf}} provides for a single Sender
 to Path or Path to Receiver information element, as in 
