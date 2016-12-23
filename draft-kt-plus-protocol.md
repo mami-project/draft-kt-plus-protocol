@@ -69,7 +69,24 @@ using the mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 
 # Introduction
 
-[EDITOR'S NOTE: three paragraphs on why we care, refer to path-signals, statefulness, abstract-mech. note intention to co-evolve with quic and connection id work.]
+This document defines a wire image for a Path Layer UDP Substrate (PLUS), for
+limited exposure of information from encrypted, UDP-encapsulated transport
+protocols. The wire image implements signaling to drive the minimal state
+machine defined in {{I-D.trammell-plus-statefulness}} as well as optional
+exposure of additional information to devices along the path using the
+mechanism described in {{I-D.trammell-plus-abstract-mech}}.
+
+As discussed in {{I-D.hardie-path-signals}}, basic information about flows
+currently exposed by TCP are missing from transport protocols that encrypt
+their headers. Given the ossification of protocol wire images due to the
+widespread deployment of protocol-inspecting and -manipulating functions in
+the network, this header encryption is necessary to support transport protocol
+evolution. However, the loss of basic information for on-path state
+maintenance as well as network performance measurement, diagnostics, and
+troubleshooting via header encryption makes network management more difficult.
+The PLUS protocol described in this document aims to mitigate this difficulty, allowing deployment of encrypted protocols without loss of essential in-network functionality.
+
+This protocol is intended primarily for state maintenance and measurement; the principles of measurement and primitives we aim to support are drawn from recent work on explicit measurability in protocol design {{IPIM}}.
 
 # Terminology
 
