@@ -102,6 +102,8 @@ header, together with the UDP header, is shown in {{fig-header-basic}}.
 The extended header is defined in {{extended-header}}.
 
 ~~~~~~~~~~~~~
+old non-aligned 32 bit magic
+
   3                   2                   1
 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
 +------------------------------+-------------------------------+
@@ -127,9 +129,43 @@ The extended header is defined in {{extended-header}}.
 ~~~~~~~~~~~~~
 {: #fig-header-basic title="PLUS header with basic exposure"}
 
+~~~~~~~~~~~~~
+new 24-bit magic parallel with QUIC list proposal
+
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++-+-+-----+-+-+-+--------------+-------------------------------+
+|1|S| ign |0|L|R|                magic                         |
++-+-+-----+-+-+-+----------------------------------------------+
+|                                                              |
++-             connection/association token CAT               -+
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++--------------------------------------------------------------+
+/                                                              \
+\         transport protocol header/payload (encrypted)        /
+/                                                              \
+~~~~~~~~~~~~~
+{: #fig-header-basic-quic title="PLUS header with basic exposure, QUIC-compatible"}
+
 Fields are encoded in network byte order and are defined as follows:
 
-- magic: A 32-bit number identifying this packet as carrying a PLUS header.
+- flags: eight bits carrying additional information:
+
+    - Stop flag (S): Packet carries a stop or stop confirmation when set.
+    - Extended Header bit: Flag bit 0x04 is set to zero in packets with a Basic Header.
+    - LoLa flag (L): Packet is latency sensitive and prefers drop to delay when set.
+    - RoI flag (R): Packet is not sensitive to reordering when set.
+    - Ignored: Bits 0-3 are ignored, and available for use by the overlying transport.
+
+- magic: A 24-bit number identifying this packet as carrying a PLUS header.
   This magic number is chosen to avoid collision with possible values of the
   first four bytes of widely deployed protocols on UDP. Should the QUIC 
   {{I-D.ietf-quic-transport}} header be defined to place the version number
@@ -159,13 +195,7 @@ Fields are encoded in network byte order and are defined as follows:
 - Packet Serial Echo (PSE): The most recent PSN seen by the
   sender in the opposite direction before this packet was sent.
 
-- Flags byte: eight bits carrying additional flags:
 
-    - Stop flag (S): Packet carries a stop or stop confirmation when set.
-    - Extended Header bit: Flag bit 0x40 is set to zero in packets with a Basic Header.
-    - LoLa flag (L): Packet is latency sensitive and prefers drop to delay when set.
-    - RoI flag (R): Packet is not sensitive to reordering when set.
-    - Ignored: Bits 0-3 are ignored, and available for use by the overlying transport.
 
 Since PLUS is designed to be used for UDP-encapsulated, encrypted transport
 protocols, overlying transports are presumed to provide encryption and
