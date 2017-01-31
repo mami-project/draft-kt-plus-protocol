@@ -212,7 +212,7 @@ in the Basic Header as follows:
 
 - If the sender is the flow initiator, and the packet is the first packet in
   the flow, the sender selects a cryptographically random 64-bit number for
-  the CAT. When multiplexing, it must ensure the PSN is not already in use for
+  the CAT. When multiplexing, it must ensure the CAT is not already in use for
   the 5-tuple. Otherwise, the sender uses the CAT associated with the flow.
 
 - If the packet is the first packet in the flow in this direction, the sender
@@ -253,6 +253,8 @@ the values in the Basic Header as follows:
 
 - It stores the PSN to be sent as the PSE on the the next packet it sends in
   the opposite direction.
+
+[Editor's note: provide more information on the interface to the crypto engine.]
 
 ## On-Path State Maintenance using the Basic Header
 
@@ -302,12 +304,12 @@ shown in {{fig-states}}.
 
 ### State Establishment
 
-A PLUS-aware on-path device forwarding a packet with a PLUS Basic Header with
-a 5-tuple and CAT it does not have state for moves that flow to the uniflow
+A PLUS-aware on-path device that forwards a packet with a PLUS Basic Header
+and does not have state for that 5-tuple plus CAT flow yet moves that flow to the uniflow
 state. It will move the flow back to zero state after not seeing a packet on
 the same flow in the same direction with the same CAT within a timeout
-interval TO_IDLE, and continues forwarding packets in that direction (the a->b
-direction in {{fig-states}}).
+interval TO_IDLE. Otherwise, it stays in uniflow state as long as it only observes packets 
+in that direction (the a->b direction in {{fig-states}}).
 
 A PLUS-aware on-path device forwarding a packet with a PLUS Basic Header with
 a matching 5-tuple and CAT as a flow in the uniflow state, but in the opposite
