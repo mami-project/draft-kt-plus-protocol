@@ -2,9 +2,9 @@
 
 This is the working area for the Individual internet-draft, "".
 
-* [Editor's copy](https://mami-project.github.io/draft-kt-plus-protocol/)
-* [Individual Draft] (https://tools.ietf.org/html/draft-kt-plus-protocol)
-* [Compare Individual Draft and Editor's copy] (https://tools.ietf.org/rfcdiff?url1=https://tools.ietf.org/id/draft-kt-plus-protocol.txt&url2=https://mami-project.github.io/draft-kt-plus-protocol/draft-kt-plus-protocol.txt)
+* [Editor's copy](https://mami-project.github.io/draft-trammell-plus-spec/)
+* [Individual Draft] (https://tools.ietf.org/html/draft-trammell-plus-spec)
+* [Compare Individual Draft and Editor's copy] (https://tools.ietf.org/rfcdiff?url1=https://tools.ietf.org/id/draft-kt-plus-protocol.txt&url2=https://mami-project.github.io/draft-trammell-plus-spec/draft-trammell-plus-spec.txt)
 
 
 ## Building the Draft
