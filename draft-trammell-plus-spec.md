@@ -102,17 +102,15 @@ header, together with the UDP header, is shown in {{fig-header-basic}}.
 The extended header is defined in {{extended-header}}.
 
 ~~~~~~~~~~~~~
-old non-aligned 32 bit magic
-
   3                   2                   1
 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
 +------------------------------+-------------------------------+
 |       UDP source port        |      UDP destination port     |
 +------------------------------+-------------------------------+
 |       UDP length             |      UDP checksum             |
-+------------------------------+-------------------------------+
-|                            magic                             |
-+--------------------------------------------------------------+
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|0|
++------------------------------------------------------+-+-+-+-+
 |                                                              |
 +-             connection/association token CAT               -+
 |                                                              |
@@ -120,59 +118,28 @@ old non-aligned 32 bit magic
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+-+-+-------+-----------------------------------------------+
-|S|0|L|R|  ign  |                                              \
-+-+-+-+-+-------+                                              /
++--------------------------------------------------------------+
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
 ~~~~~~~~~~~~~
 {: #fig-header-basic title="PLUS header with basic exposure"}
 
-~~~~~~~~~~~~~
-new 24-bit magic parallel with QUIC list proposal
-
-  3                   2                   1
-1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-+------------------------------+-------------------------------+
-|       UDP source port        |      UDP destination port     |
-+------------------------------+-------------------------------+
-|       UDP length             |      UDP checksum             |
-+-+-+-----+-+-+-+--------------+-------------------------------+
-|1|S| ign |0|L|R|                magic                         |
-+-+-+-----+-+-+-+----------------------------------------------+
-|                                                              |
-+-             connection/association token CAT               -+
-|                                                              |
-+--------------------------------------------------------------+
-|                 packet serial number  PSN                    |
-+--------------------------------------------------------------+
-|                 packet serial echo    PSE                    |
-+--------------------------------------------------------------+
-/                                                              \
-\         transport protocol header/payload (encrypted)        /
-/                                                              \
-~~~~~~~~~~~~~
-{: #fig-header-basic-quic title="PLUS header with basic exposure, QUIC-compatible"}
 
 Fields are encoded in network byte order and are defined as follows:
 
-- flags: eight bits carrying additional information:
+- magic: A 28-bit number identifying this packet as carrying a PLUS header. This
+  magic number is chosen to avoid collision with possible values of the first
+  four bytes of widely deployed protocols on UDP. The value 0xd8007ff has been
+  provisionally selected for the PLUS magic number based of experience with the
+  SPUD prototype, a cursory survey of common UDP protocols, and compatibility
+  with [EDITOR'S NOTE: cite according to colin's input]
 
-    - Stop flag (S): Packet carries a stop or stop confirmation when set.
-    - Extended Header bit: Flag bit 0x04 is set to zero in packets with a Basic Header.
+- flags: four bits carrying additional information:
     - LoLa flag (L): Packet is latency sensitive and prefers drop to delay when set.
     - RoI flag (R): Packet is not sensitive to reordering when set.
-    - Ignored: Bits 0-3 are ignored, and available for use by the overlying transport.
-
-- magic: A 24-bit number identifying this packet as carrying a PLUS header.
-  This magic number is chosen to avoid collision with possible values of the
-  first four bytes of widely deployed protocols on UDP. Should the QUIC 
-  {{I-D.ietf-quic-transport}} header be defined to place the version number
-  in the first four bytes of the packet, this number should be compatible with
-  the QUIC version numbering scheme. The value 0xd8007ffe has been 
-  provisionally selected for the PLUS magic number based of experience with 
-  the SPUD prototype, and a cursory survey of common UDP protocols.
+    - Stop flag (S): Packet carries a stop or stop confirmation when set.
+    - Extended Header bit: Flag bit 0x01 is set to zero in packets with a Basic Header.
 
 - Connection/Association Token (CAT): A 64-bit token identifying this 
   association. The CAT should be chosen randomly by the connection initiator. 
@@ -195,8 +162,6 @@ Fields are encoded in network byte order and are defined as follows:
 - Packet Serial Echo (PSE): The most recent PSN seen by the
   sender in the opposite direction before this packet was sent.
 
-
-
 Since PLUS is designed to be used for UDP-encapsulated, encrypted transport
 protocols, overlying transports are presumed to provide encryption and
 integrity protection for their own headers. For the sake of efficiency, it is
@@ -208,7 +173,7 @@ PLUS Basic Header.
 When a sender has a packet ready to send using PLUS, it determines the values
 in the Basic Header as follows:
 
-- The magic number is set to the constant 0xd8007ffe.
+- The magic number is set to the constant 0xd8007ff.
 
 - If the sender is the flow initiator, and the packet is the first packet in
   the flow, the sender selects a cryptographically random 64-bit number for
@@ -219,15 +184,11 @@ in the Basic Header as follows:
   selects a cryptographically random 32-bit number for the PSN. Otherwise, the
   sender adds one to the PSN on the last packet it sent in this flow, and uses
   that value for the PSN. If the last PSN is 0xffffffff, it wraps around,
-  setting the PSN to 0x00000000.
+  setting the PSN to 0x00000001. A PSN of 0x00000000 is never sent.
 
 - If the packet is the first packet in the flow in this direction, the sender
   sets the PSE to 0x00000000. Otherwise it sets the PSE to the PSN of the last
   packet seen in the opposite direction.
-
-- If the overlying transport determines that this packet is the last to be
- sent in this direction, the sender sets the S flag; see
- {{bidirectional-stop-signaling}} for details.
 
 - If the overlying transport determines that this packet is loss-insensitive
   but latency-sensitive, the sender sets the L flag.
@@ -235,15 +196,16 @@ in the Basic Header as follows:
 - If the overlying transport determines that this packet may be freely
   reordered, the sender sets the R flag.
 
-- The overlying transport may freely use the four ignored flag bits for its
-  own purposes.
+- If the overlying transport determines that this packet is the last to be
+ sent in this direction, the sender sets the S flag; see
+ {{bidirectional-stop-signaling}} for details.
 
 ## Receiver Behavior
 
 When a receiver receives a packet containing a PLUS Basic Header, it processes
 the values in the Basic Header as follows:
 
-- It verifies that the magic number is the constant 0xd800fffe.
+- It verifies that the magic number is the constant 0xd800fff.
 
 - It verifies the integrity of the information in the PLUS Basic Header, using
   information carried in the overlying transport. Packets failing integrity
@@ -287,14 +249,14 @@ shown in {{fig-states}}.
   |                             V             
   |                    +============+  
   | TO_ASSOCIATED     /              \<-+     
-  +<-----------------(   half-close   ) | a<->b
+  +<-----------------(    stop-wait   ) | a<->b
   |                   \              /--+          
   |                   +============+       
   |                       | stop z->y
   |                       V
   |              +============+
-  | TO_CLOSING  /              \
-  +------------(    closing     )
+  | TO_STOPPING /              \
+  +------------(    stopping     )
                 \              /
                  +============+
 ~~~~~~~~~~~~~
@@ -328,24 +290,24 @@ TO_ASSOCIATED timer for every packet it forwards in this state.
 ### Bidirectional Stop Signaling
 
 A PLUS-aware on-path device forwarding a packet for a flow in the associated
-state with an S flag set moves that flow to half-close state. It stores the
+state with an S flag set moves that flow to stop-wait state. It stores the
 PSN on the packet causing the transition, and continues forwarding packets as
 if in associated state, dropping state on timeout interval TO_ASSOCIATED.
 
 When it sees a packet in the opposite direction with the S flag set and the
-PSE set to exactly the stored PSN, it transitions the flow to closing state.
-The device will forward packets in both directions for flows in the closing
-state within a timeout interval TO_CLOSING; these packets will not reset the
+PSE set to exactly the stored PSN, it transitions the flow to stopping state.
+The device will forward packets in both directions for flows in the stopping
+state within a timeout interval TO_STOPPING; these packets will not reset the
 timer. See {{bidirectional-stop-signaling}} for details.
 
 Note that even though the S flag is integrity-protected end to end, a packet
 with the S flag set could be forged by one on-path device to drive the flow
-into half-close state on all downstream devices. However, this attack is of
+into stop-wait state on all downstream devices. However, this forgery is of
 severely limited utility. First, it would require coordination between
 attackers on both sides of a given on-path device in order to forge a
 confirmation of the stop signal -- a flag with the S bit set and a valid PSE
 corresponding to the PSN of the first stop signal to drive the flow into
-closing state. Second, the information in the Basic Header on each packet will
+stopping state. Second, the information in the Basic Header on each packet will
 drive the state machine into associated state even in the middle of a flow,
 enabling fast recovery even in the case of such a coordinated attack.
 
@@ -368,7 +330,7 @@ seeing a PSN and a corresponding PSE in each direction, then adds the delays
 from each direction together. The fact that the PSN increments by one for
 every packet, including packets carrying retransmitted data or only control
 traffic, makes this measurement much simpler than the equivalent measurement
-using TCP sequence and acknowledgment numbers.
+using TCP sequence and acknowledgment numbers. [EDITOR'S NOTE: specify this fully]
 
 To calculate loss upstream from an observation point in each direction, the
 observation point simply counts skips in the PSN number space. Since PLUS does
@@ -405,9 +367,9 @@ Information Elements.
 |       UDP source port        |      UDP destination port     |
 +------------------------------+-------------------------------+
 |       UDP length             |      UDP checksum             |
-+------------------------------+-------------------------------+
-|                            magic                             |
-+--------------------------------------------------------------+
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|1|
++------------------------------------------------------+-+-+-+-+
 |                                                              |
 +-             connection/association token CAT               -+
 |                                                              |
@@ -415,9 +377,9 @@ Information Elements.
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+-+-+-+-+-------+---------------+------------------------------+
-|S|1|L|R|  ign  |    PCF Type   |                              /
-+-+-+-+-+-------+---------------+                              \
++---------------+---------------+------------------------------+
+|   PCF Length  |    PCF Type   |                              /
++---------------+---------------+                              \
 \                                                              /
 /                 PCF value (variable-length)                  \
 \                                                              /
