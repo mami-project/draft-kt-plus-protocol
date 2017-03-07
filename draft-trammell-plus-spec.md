@@ -1,7 +1,7 @@
 ---
 title: Path Layer UDP Substrate Specification
 abbrev: PLUS Spec
-docname: draft-trammell-plus-spec-00
+docname: draft-trammell-plus-spec-01
 date:
 category: exp
 
