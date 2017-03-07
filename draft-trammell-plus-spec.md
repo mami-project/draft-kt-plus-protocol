@@ -32,8 +32,10 @@ author:
 informative:
   RFC0793:
   RFC2474:
+  RFC4821:
   RFC7675:
   RFC7323:
+  RFC8035:
 
   I-D.hardie-path-signals:
   I-D.trammell-plus-abstract-mech:
@@ -41,7 +43,7 @@ informative:
   I-D.ietf-quic-transport:
 
   IPIM:
-    title: In-Protocol Internet Measurement (arXiv preprint 1612.02902)
+    title: Principles for Measurability in Protocol Design (arXiv preprint 1612.02902)
     author:
       - 
         ins: M. Allman
@@ -92,12 +94,13 @@ are drawn from recent work on explicit measurability in protocol design
 
 # State Maintenance and Measurement: Basic Header {#basic-header}
 
-Every packet in each direction of a flow using PLUS MUST carry either a PLUS
-basic or PLUS extended header. The PLUS basic header supports multiplexing
-using a connection token; basic state maintenance using association and
-confirmation signals, packet serial numbers, and a two-way stop signal; and
-basic measurability using packet serial number echo. The format of the basic
-header, together with the UDP header, is shown in {{fig-header-basic}}.
+Every packet in each direction of a flow using PLUS carries a PLUS header. This
+can be either a basic header, or an extended header. The PLUS basic header
+supports multiplexing using a connection token; basic state maintenance using
+association and confirmation signals, packet serial numbers, and a two-way stop
+signal; and basic measurability using packet serial number echo. The format of
+the basic header, together with the UDP header, is shown in
+{{fig-header-basic}}.
 
 The extended header is defined in {{extended-header}}.
 
@@ -133,13 +136,13 @@ Fields are encoded in network byte order and are defined as follows:
   four bytes of widely deployed protocols on UDP. The value 0xd8007ff has been
   provisionally selected for the PLUS magic number based of experience with the
   SPUD prototype, a cursory survey of common UDP protocols, and compatibility
-  with [EDITOR'S NOTE: cite according to colin's input]
+  with {{RFC8035}}.
 
 - flags: four bits carrying additional information:
     - LoLa flag (L): Packet is latency sensitive and prefers drop to delay when set.
     - RoI flag (R): Packet is not sensitive to reordering when set.
     - Stop flag (S): Packet carries a stop or stop confirmation when set.
-    - Extended Header bit: Flag bit 0x01 is set to zero in packets with a Basic Header.
+    - Extended Header bit: Flag bit 0x01 is zero in packets with a Basic Header.
 
 - Connection/Association Token (CAT): A 64-bit token identifying this 
   association. The CAT should be chosen randomly by the connection initiator. 
@@ -196,16 +199,17 @@ in the Basic Header as follows:
 - If the overlying transport determines that this packet may be freely
   reordered, the sender sets the R flag.
 
-- If the overlying transport determines that this packet is the last to be
- sent in this direction, the sender sets the S flag; see
- {{bidirectional-stop-signaling}} for details.
+- If the overlying transport determines that the connection is shutting down,
+and no further packets will be sent in this direction other than packets part
+of this shutdown, the sender sets the S flag; see
+{{twostop}} for details.
 
 ## Receiver Behavior
 
 When a receiver receives a packet containing a PLUS Basic Header, it processes
 the values in the Basic Header as follows:
 
-- It verifies that the magic number is the constant 0xd800fff.
+- It verifies that the magic number is the constant 0xd800fff. If the receiver is expecting a PLUS packet, and it does not see this value, it drops the packet without further processing.
 
 - It verifies the integrity of the information in the PLUS Basic Header, using
   information carried in the overlying transport. Packets failing integrity
@@ -215,8 +219,6 @@ the values in the Basic Header as follows:
 
 - It stores the PSN to be sent as the PSE on the the next packet it sends in
   the opposite direction.
-
-[Editor's note: provide more information on the interface to the crypto engine.]
 
 ## On-Path State Maintenance using the Basic Header
 
@@ -266,28 +268,27 @@ shown in {{fig-states}}.
 
 ### State Establishment
 
-A PLUS-aware on-path device that forwards a packet with a PLUS Basic Header
-and does not have state for that 5-tuple plus CAT flow yet moves that flow to the uniflow
-state. It will move the flow back to zero state after not seeing a packet on
-the same flow in the same direction with the same CAT within a timeout
-interval TO_IDLE. Otherwise, it stays in uniflow state as long as it only observes packets 
-in that direction (the a->b direction in {{fig-states}}).
+On the first packet with a PLUS header forwarded by an on-path device for a
+given 5-tuple plus CAT, the device moves that flow from the zero state to the
+uniflow state. The device retuens the flow to zero state after not seeing a
+packet on the same flow in the same direction with the same CAT within a
+timeout interval TO_IDLE. Otherwise, it stays in uniflow state and continues
+forwarding packets, as long as it only observes packets in the same direction
+as the initial packet. (the a->b direction in {{fig-states}}).
 
-A PLUS-aware on-path device forwarding a packet with a PLUS Basic Header with
-a matching 5-tuple and CAT as a flow in the uniflow state, but in the opposite
-direction (the b->a direction in {{fig-states}}), moves that flow to the
-associating state. It stores the PSN of the packet that caused this
-transition, and waits for a packet in the a->b direction containing a PSE
-indicating that that packet has been received. When it sees that packet, it
-transitions the flow to associated state. Otherwise, it drops state after a
-timeout interval TO_IDLE.
+A PLUS-aware on-path device forwarding a packet with a PLUS header with a
+reversed 5-tuple and identical CAT (the b->a direction in {{fig-states}}) to a
+flow in the uniflow state, moves that flow to the associating state. It then
+waits to see a packet with a PSE in the a->b direction equal to the PSN on the
+first reverse packet; on receipt of this packet, the device moves the flow to
+associated state. Otherwise, it drops state after a timeout interval TO_IDLE.
 
 Once a flow has moved to the associated state, it will remain in that state
 for a timeout interval TO_ASSOCIATED. The on-path device forwards any packet
-with a PLUS Basic Header in either direction for this flow. It resets the
+with a PLUS header in either direction for this flow. It resets the
 TO_ASSOCIATED timer for every packet it forwards in this state.
 
-### Bidirectional Stop Signaling
+### Bidirectional Stop Signaling {#twostop}
 
 A PLUS-aware on-path device forwarding a packet for a flow in the associated
 state with an S flag set moves that flow to stop-wait state. It stores the
@@ -298,7 +299,7 @@ When it sees a packet in the opposite direction with the S flag set and the
 PSE set to exactly the stored PSN, it transitions the flow to stopping state.
 The device will forward packets in both directions for flows in the stopping
 state within a timeout interval TO_STOPPING; these packets will not reset the
-timer. See {{bidirectional-stop-signaling}} for details.
+timer.
 
 Note that even though the S flag is integrity-protected end to end, a packet
 with the S flag set could be forged by one on-path device to drive the flow
@@ -313,46 +314,60 @@ enabling fast recovery even in the case of such a coordinated attack.
 
 ### State Rebinding
 
-A PLUS-aware on-path device forwarding a packet for a flow in the zero state,
-where one of the endpoint identifiers (address and port) and the CAT, but not
-the other endpoint identifier, match a flow in a non-zero state, accounts that
-packet to the existing flow, updating the changed endpoint identifier. This
-allows fast rebinding of state in case of changes in network address
-translation or connectivity of the sender.
+One end of a PLUS association may change its address while maintaining on-path
+state; e.g. due to a NAT change. A PLUS-aware on-path device that forwards a
+packet for a flow in the zero state, where one of the endpoint identifiers
+(address and port) and the CAT, but not the other endpoint identifier, match a
+flow in a non-zero state, treats that packet as belonging to the existing flow,
+and updates the endpoint identifier.
 
 ## Measurement and Diagnosis using the Basic Header
 
 The basic header trivially supports passive two-way delay measurement as well
-as partial loss estimation at a single observation point.
+as partial loss estimation at a single observation point on path.
 
 To calculate two-way delay, an observation point calculates the delay between
 seeing a PSN and a corresponding PSE in each direction, then adds the delays
 from each direction together. The fact that the PSN increments by one for
-every packet, including packets carrying retransmitted data or only control
-traffic, makes this measurement much simpler than the equivalent measurement
-using TCP sequence and acknowledgment numbers. [EDITOR'S NOTE: specify this fully]
+every packet makes this measurement much simpler than the equivalent measurement
+using TCP sequence and acknowledgment numbers.
 
-To calculate loss upstream from an observation point in each direction, the
-observation point simply counts skips in the PSN number space. Since PLUS does
-not expose information about retransmissions (and, indeed, may not even carry
-a transport that uses retransmission for loss recovery), loss downstream from
-the observation point cannot be observed.
+[EDITOR'S NOTE: specify this fully.]
+
+Loss and reordering upstream from an observation point in each direction can be
+estimated through examination of the PSN sequence observed. A skipped PSN not
+seen within a specified interval can be counted as a lost packet, and the
+extent of reordering estimated by the degree of skipping seen in those skipped
+PSNs that are later observed. Since PLUS does not expose information about
+retransmissions (and, indeed, may not even carry a transport that uses
+retransmission for loss recovery), loss downstream from the observation point
+cannot be observed.
 
 # Path Communication: Extended Header {#extended-header}
 
 Additional facilities for communicating with on-path devices under endpoint
 control are provided by the PLUS Extended Header. The extended header shares
-the layout of its first 21 bytes with the PLUS Basic Header, except the
-Extended Header bit (0x40 on byte 20) is set. As with the Basic Header,
+the layout of its first 20 bytes with the PLUS Basic Header, except the
+Extended Header bit (0x01 on byte 11) is set. As with the Basic Header,
 overlying transports are presumed to provide encryption and integrity
-protection for the PLUS Extended Header.
+protection for the PLUS Extended Header. The Extended Header has three extra
+fields:
 
-The Extended Header shown in {{fig-header-pcf}} provides for a single Sender
-to Path or Path to Receiver information element, as in 
-{{I-D.trammell-plus-abstract-mech}}, to appear on the packet, 
-within a Path Communication Field.
-PCF Type information is carried in Byte 21 of the header, with the length of
-the PCF value to be determined by its type.
+- PCF Length: an 8-byte value defining the length of the PCF value, from 0 to
+  255. Add 22 to this value to get the offset of the PLUS payload (i.e., the
+  overlying transport header). The PLUS Extended Header is therefore 22 to 277
+  octets long.
+
+- P bit: If set, the PCF is a Path to Receiver PCF, to be written by devices
+  along the path, and its presence and length (but not content) will be
+  integrity-protected end-to-end. If clear, the PCF is a Sender to Path PCF, and
+  its presence, length, and content will be integrity-protected end-to-end.
+
+- X bit: Reserved for future extension of the PCF type system.
+
+- PCF Type: a 6-byte value defining the type of the PCF value; there are
+  therefore 64 distinct Sender to Path and 64 distinct Path to Receiver PCFs
+  available.
 
 Further details of PCF encoding are not yet defined in this revision of the
 specification; the remainder of this section discusses the types of
@@ -377,18 +392,18 @@ Information Elements.
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+---------------+---------------+------------------------------+
-|   PCF Length  |    PCF Type   |                              /
-+---------------+---------------+                              \
++---------------+-+-+-----------+------------------------------+
+|   PCF Length  |P|X| PCF Type  |                              /
++---------------+-+-+-----------+                              \
 \                                                              /
-/                 PCF value (variable-length)                  \
+/                    PCF  (variable-length)                    \
 \                                                              /
 +--------------------------------------------------------------+
 /                                                              \
 \         transport protocol header/payload (encrypted)        /
 /                                                              \
 ~~~~~~~~~~~~~
-{: #fig-header-pcf title="PLUS extended header (conceptual; details TBD)"}
+{: #fig-header-pcf title="PLUS extended header"}
 
 As described in {{I-D.trammell-plus-abstract-mech}}, there are two types of
 signals: Path to Receiver signals, which allow devices along the path to
@@ -414,11 +429,15 @@ for measurement and diagnostic purposes. These signals are advisory only, and
 should not be presumed by either the endpoints or devices along the path to
 affect forwarding behavior.
 
-- Timestamp and timestamp echo. Similar to TCP timestamps in {{RFC7323}}, also
-  encoding a delta between receipt of last timestamp and transmission of echo
-  as in section 4.1.2 of {{IPIM}}. Allows constant-rate clock exposure to devices
-  on path. Note that this is less necessary for RTT measurement of one-sided flows 
-  than it is in TCP, due to the properties of the PSN and PSE values in the Basic Header.
+- Packet number echo delta time. Exposes the interval between the receipt of
+the packet whose number appears in the PSE and the transmission of this packet,
+as in section 4.1.2 of {{IPIM}}. Together with analysis of the PSN and PSE
+sequence, this allows high-precision RTT estimation.
+
+- Timestamp and timestamp echo. Similar to TCP timestamps in {{RFC7323}},
+allows constant-rate clock exposure to devices on path. Note that this is less
+necessary for RTT measurement of one-sided flows than it is in TCP, due to the
+properties of the PSN and PSE values in the Basic Header.
 
 We have identified the following path to receiver signals as potentially
 useful. Note that accumulated values for use at the sender must be fed back to
@@ -430,7 +449,7 @@ values at the sender.
 - MTU accumulator. This signal allows measurement of MTU information from
   PLUS-aware devices. The sender sets the initial value to the sender's MTU. A
   PLUS-aware forwarding device on path receiving this value fills in the
-  minimum of the received value and the MTU of the next hop into this field. 
+  minimum of the received value and the MTU of the next hop into this field. The information, when fed back to the sender, can be used as a hint for a running PLPMTUD {{RFC4821}} process.
 
 - State timeout accumulator. This signal allows measurement of timeouts
   from PLUS-aware devices. It is initialized to a maximum ("no information")
@@ -464,7 +483,25 @@ revision.
 
 # Security Considerations
 
-[EDITOR'S NOTE: write me]
+This document describes the PLUS Basic and Extended Headers, and the protocol
+they support. This protocol can be used to expose information to devices along
+the path to replace the analysis of transport- and application-layer headers
+when those headers are encrypted. Care must be taken in the exposure of such
+information to ensure no irrelevant application and/or user confidential
+information is exposed.
+
+PLUS itself contains some security-relevant features. In concert with an
+encrypted overlying transport, the PLUS Basic and Extended Headers are
+integrity-protected to prevent manipulation on-path of any value except Path to
+Receiver values; this integrity protection prevents Path to Receiver values
+from being injected without explicit sender involvement, or from being stripped
+from the PLUS Extended Header.
+
+The CAT and PSE described in {{basic-header}} taken together, provide entropy
+to prevent on-path devices from being driven into incorrect states by off-path
+attackers. Bidirectional stop signaling as in {{twostop}} requires an on-path
+attacker of a given middlebox to forge traffic on both of the middlebox's
+interfaces to drive a middlebox to inappropriately drop state for a flow.
 
 # Acknowledgments
 
