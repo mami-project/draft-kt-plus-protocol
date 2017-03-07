@@ -5,7 +5,7 @@
 Network Working Group                                        B. Trammell
 Internet-Draft                                             M. Kuehlewind
 Intended status: Experimental                                 ETH Zurich
-Expires: June 26, 2017                                 December 23, 2016
+Expires: September 8, 2017                                March 07, 2017
 
 
                  Path Layer UDP Substrate Specification
@@ -36,11 +36,11 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on June 26, 2017.
+   This Internet-Draft will expire on September 8, 2017.
 
 Copyright Notice
 
-   Copyright (c) 2016 IETF Trust and the persons identified as the
+   Copyright (c) 2017 IETF Trust and the persons identified as the
    document authors.  All rights reserved.
 
    This document is subject to BCP 78 and the IETF Trust's Legal
@@ -53,9 +53,9 @@ Copyright Notice
 
 
 
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 1]
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 1]
 
-Internet-Draft                  PLUS Spec                  December 2016
+Internet-Draft                  PLUS Spec                     March 2017
 
 
    the Trust Legal Provisions and are provided without warranty as
@@ -65,20 +65,20 @@ Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
    2.  State Maintenance and Measurement: Basic Header . . . . . . .   3
-     2.1.  Sender Behavior . . . . . . . . . . . . . . . . . . . . .   5
+     2.1.  Sender Behavior . . . . . . . . . . . . . . . . . . . . .   4
      2.2.  Receiver Behavior . . . . . . . . . . . . . . . . . . . .   5
      2.3.  On-Path State Maintenance using the Basic Header  . . . .   6
-       2.3.1.  State Establishment . . . . . . . . . . . . . . . . .   7
-       2.3.2.  Bidirectional Stop Signaling  . . . . . . . . . . . .   8
+       2.3.1.  State Establishment . . . . . . . . . . . . . . . . .   6
+       2.3.2.  Bidirectional Stop Signaling  . . . . . . . . . . . .   7
        2.3.3.  State Rebinding . . . . . . . . . . . . . . . . . . .   8
-     2.4.  Measurement and Diagnosis using the Basic Header  . . . .   9
-   3.  Path Communication: Extended Header . . . . . . . . . . . . .   9
+     2.4.  Measurement and Diagnosis using the Basic Header  . . . .   8
+   3.  Path Communication: Extended Header . . . . . . . . . . . . .   8
      3.1.  Measurement and Diagnostics using the Extended Header . .  11
    4.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
    5.  Security Considerations . . . . . . . . . . . . . . . . . . .  12
-   6.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  12
-   7.  Informative References  . . . . . . . . . . . . . . . . . . .  12
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  13
+   6.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  13
+   7.  Informative References  . . . . . . . . . . . . . . . . . . .  13
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
 
 1.  Introduction
 
@@ -109,9 +109,9 @@ Table of Contents
 
 
 
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 2]
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 2]
 
-Internet-Draft                  PLUS Spec                  December 2016
+Internet-Draft                  PLUS Spec                     March 2017
 
 
    to support are drawn from recent work on explicit measurability in
@@ -119,13 +119,13 @@ Internet-Draft                  PLUS Spec                  December 2016
 
 2.  State Maintenance and Measurement: Basic Header
 
-   Every packet in each direction of a flow using PLUS MUST carry either
-   a PLUS basic or PLUS extended header.  The PLUS basic header supports
-   multiplexing using a connection token; basic state maintenance using
-   association and confirmation signals, packet serial numbers, and a
-   two-way stop signal; and basic measurability using packet serial
-   number echo.  The format of the basic header, together with the UDP
-   header, is shown in Figure 1.
+   Every packet in each direction of a flow using PLUS carries a PLUS
+   header.  This can be either a basic header, or an extended header.
+   The PLUS basic header supports multiplexing using a connection token;
+   basic state maintenance using association and confirmation signals,
+   packet serial numbers, and a two-way stop signal; and basic
+   measurability using packet serial number echo.  The format of the
+   basic header, together with the UDP header, is shown in Figure 1.
 
    The extended header is defined in Section 3.
 
@@ -135,9 +135,9 @@ Internet-Draft                  PLUS Spec                  December 2016
    |       UDP source port        |      UDP destination port     |
    +------------------------------+-------------------------------+
    |       UDP length             |      UDP checksum             |
-   +------------------------------+-------------------------------+
-   |                            magic                             |
-   +--------------------------------------------------------------+
+   +------------------------------+-----------------------+-+-+-+-+
+   |                            magic                     |L|R|S|0|
+   +------------------------------------------------------+-+-+-+-+
    |                                                              |
    +-             connection/association token CAT               -+
    |                                                              |
@@ -145,9 +145,7 @@ Internet-Draft                  PLUS Spec                  December 2016
    |                 packet serial number  PSN                    |
    +--------------------------------------------------------------+
    |                 packet serial echo    PSE                    |
-   +-+-+-+-+-------+-----------------------------------------------+
-   |S|0|L|R|  ign  |                                              \
-   +-+-+-+-+-------+                                              /
+   +--------------------------------------------------------------+
    /                                                              \
    \         transport protocol header/payload (encrypted)        /
    /                                                              \
@@ -156,24 +154,34 @@ Internet-Draft                  PLUS Spec                  December 2016
 
    Fields are encoded in network byte order and are defined as follows:
 
-   o  magic: A 32-bit number identifying this packet as carrying a PLUS
+   o  magic: A 28-bit number identifying this packet as carrying a PLUS
       header.  This magic number is chosen to avoid collision with
       possible values of the first four bytes of widely deployed
-      protocols on UDP.  Should the QUIC [I-D.ietf-quic-transport]
-      header be defined to place the version number in the first four
-      bytes of the packet, this number should be compatible with the
+      protocols on UDP.  The value 0xd8007ff has been provisionally
+      selected for the PLUS magic number based of experience with the
+      SPUD prototype, a cursory survey of common UDP protocols, and
+      compatibility with [RFC8035].
 
 
 
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 3]
+
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 3]
 
-Internet-Draft                  PLUS Spec                  December 2016
+Internet-Draft                  PLUS Spec                     March 2017
 
 
-      QUIC version numbering scheme.  The value 0xd8007ffe has been
-      provisionally selected for the PLUS magic number based of
-      experience with the SPUD prototype, and a cursory survey of common
-      UDP protocols.
+   o  flags: four bits carrying additional information:
+
+      *  LoLa flag (L): Packet is latency sensitive and prefers drop to
+         delay when set.
+
+      *  RoI flag (R): Packet is not sensitive to reordering when set.
+
+      *  Stop flag (S): Packet carries a stop or stop confirmation when
+         set.
+
+      *  Extended Header bit: Flag bit 0x01 is zero in packets with a
+         Basic Header.
 
    o  Connection/Association Token (CAT): A 64-bit token identifying
       this association.  The CAT should be chosen randomly by the
@@ -198,34 +206,9 @@ Internet-Draft                  PLUS Spec                  December 2016
    o  Packet Serial Echo (PSE): The most recent PSN seen by the sender
       in the opposite direction before this packet was sent.
 
-   o  Flags byte: eight bits carrying additional flags:
-
-      *  Stop flag (S): Packet carries a stop or stop confirmation when
-         set.
-
-      *  Extended Header bit: Flag bit 0x40 is set to zero in packets
-         with a Basic Header.
-
-      *  LoLa flag (L): Packet is latency sensitive and prefers drop to
-         delay when set.
-
-      *  RoI flag (R): Packet is not sensitive to reordering when set.
-
-      *  Ignored: Bits 0-3 are ignored, and available for use by the
-         overlying transport.
-
    Since PLUS is designed to be used for UDP-encapsulated, encrypted
    transport protocols, overlying transports are presumed to provide
    encryption and integrity protection for their own headers.  For the
-
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 4]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
-
    sake of efficiency, it is also assumed that this integrity protection
    can be extended to the bits in the PLUS Basic Header.
 
@@ -234,12 +217,19 @@ Internet-Draft                  PLUS Spec                  December 2016
    When a sender has a packet ready to send using PLUS, it determines
    the values in the Basic Header as follows:
 
-   o  The magic number is set to the constant 0xd8007ffe.
+   o  The magic number is set to the constant 0xd8007ff.
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 4]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
 
    o  If the sender is the flow initiator, and the packet is the first
       packet in the flow, the sender selects a cryptographically random
       64-bit number for the CAT.  When multiplexing, it must ensure the
-      PSN is not already in use for the 5-tuple.  Otherwise, the sender
+      CAT is not already in use for the 5-tuple.  Otherwise, the sender
       uses the CAT associated with the flow.
 
    o  If the packet is the first packet in the flow in this direction,
@@ -247,15 +237,11 @@ Internet-Draft                  PLUS Spec                  December 2016
       the PSN.  Otherwise, the sender adds one to the PSN on the last
       packet it sent in this flow, and uses that value for the PSN.  If
       the last PSN is 0xffffffff, it wraps around, setting the PSN to
-      0x00000000.
+      0x00000001.  A PSN of 0x00000000 is never sent.
 
    o  If the packet is the first packet in the flow in this direction,
       the sender sets the PSE to 0x00000000.  Otherwise it sets the PSE
       to the PSN of the last packet seen in the opposite direction.
-
-   o  If the overlying transport determines that this packet is the last
-      to be sent in this direction, the sender sets the S flag; see
-      Section 2.3.2 for details.
 
    o  If the overlying transport determines that this packet is loss-
       insensitive but latency-sensitive, the sender sets the L flag.
@@ -263,24 +249,19 @@ Internet-Draft                  PLUS Spec                  December 2016
    o  If the overlying transport determines that this packet may be
       freely reordered, the sender sets the R flag.
 
-   o  The overlying transport may freely use the four ignored flag bits
-      for its own purposes.
+   o  If the overlying transport determines that the connection is
+      shutting down, and no further packets will be sent in this
+      direction other than packets part of this shutdown, the sender
+      sets the S flag; see Section 2.3.2 for details.
 
 2.2.  Receiver Behavior
 
    When a receiver receives a packet containing a PLUS Basic Header, it
    processes the values in the Basic Header as follows:
 
-   o  It verifies that the magic number is the constant 0xd800fffe.
-
-
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 5]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
+   o  It verifies that the magic number is the constant 0xd800fff.  If
+      the receiver is expecting a PLUS packet, and it does not see this
+      value, it drops the packet without further processing.
 
    o  It verifies the integrity of the information in the PLUS Basic
       Header, using information carried in the overlying transport.
@@ -292,51 +273,20 @@ Internet-Draft                  PLUS Spec                  December 2016
    o  It stores the PSN to be sent as the PSE on the the next packet it
       sends in the opposite direction.
 
+
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 5]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
 2.3.  On-Path State Maintenance using the Basic Header
 
    The basic header provides all the signals necessary to drive the
    transport- independent state machine described in
    [I-D.trammell-plus-statefulness], as shown in Figure 2.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 6]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
 
        `- - - - - - - - - - - - - - - - - - - - - - - - - - - -'
        `    +============+    a->b    +============+           '
@@ -362,14 +312,14 @@ Internet-Draft                  PLUS Spec                  December 2016
      |                             V
      |                    +============+
      | TO_ASSOCIATED     /              \<-+
-     +<-----------------(   half-close   ) | a<->b
+     +<-----------------(    stop-wait   ) | a<->b
      |                   \              /--+
      |                   +============+
      |                       | stop z->y
      |                       V
      |              +============+
-     | TO_CLOSING  /              \
-     +------------(    closing     )
+     | TO_STOPPING /              \
+     +------------(    stopping     )
                    \              /
                     +============+
 
@@ -377,100 +327,104 @@ Internet-Draft                  PLUS Spec                  December 2016
 
 2.3.1.  State Establishment
 
-   A PLUS-aware on-path device forwarding a packet with a PLUS Basic
-   Header with a 5-tuple and CAT it does not have state for moves that
-   flow to the uniflow state.  It will move the flow back to zero state
-   after not seeing a packet on the same flow in the same direction with
-   the same CAT within a timeout interval TO_IDLE, and continues
-   forwarding packets in that direction (the a->b direction in
-   Figure 2).
+   On the first packet with a PLUS header forwarded by an on-path device
+   for a given 5-tuple plus CAT, the device moves that flow from the
+   zero state to the uniflow state.  The device retuens the flow to zero
 
 
 
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 7]
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 6]
 
-Internet-Draft                  PLUS Spec                  December 2016
+Internet-Draft                  PLUS Spec                     March 2017
 
 
-   A PLUS-aware on-path device forwarding a packet with a PLUS Basic
-   Header with a matching 5-tuple and CAT as a flow in the uniflow
-   state, but in the opposite direction (the b->a direction in
-   Figure 2), moves that flow to the associating state.  It stores the
-   PSN of the packet that caused this transition, and waits for a packet
-   in the a->b direction containing a PSE indicating that that packet
-   has been received.  When it sees that packet, it transitions the flow
-   to associated state.  Otherwise, it drops state after a timeout
-   interval TO_IDLE.
+   state after not seeing a packet on the same flow in the same
+   direction with the same CAT within a timeout interval TO_IDLE.
+   Otherwise, it stays in uniflow state and continues forwarding
+   packets, as long as it only observes packets in the same direction as
+   the initial packet. (the a->b direction in Figure 2).
+
+   A PLUS-aware on-path device forwarding a packet with a PLUS header
+   with a reversed 5-tuple and identical CAT (the b->a direction in
+   Figure 2) to a flow in the uniflow state, moves that flow to the
+   associating state.  It then waits to see a packet with a PSE in the
+   a->b direction equal to the PSN on the first reverse packet; on
+   receipt of this packet, the device moves the flow to associated
+   state.  Otherwise, it drops state after a timeout interval TO_IDLE.
 
    Once a flow has moved to the associated state, it will remain in that
    state for a timeout interval TO_ASSOCIATED.  The on-path device
-   forwards any packet with a PLUS Basic Header in either direction for
-   this flow.  It resets the TO_ASSOCIATED timer for every packet it
-   forwards in this state.
+   forwards any packet with a PLUS header in either direction for this
+   flow.  It resets the TO_ASSOCIATED timer for every packet it forwards
+   in this state.
 
 2.3.2.  Bidirectional Stop Signaling
 
    A PLUS-aware on-path device forwarding a packet for a flow in the
-   associated state with an S flag set moves that flow to half-close
+   associated state with an S flag set moves that flow to stop-wait
    state.  It stores the PSN on the packet causing the transition, and
    continues forwarding packets as if in associated state, dropping
    state on timeout interval TO_ASSOCIATED.
 
    When it sees a packet in the opposite direction with the S flag set
    and the PSE set to exactly the stored PSN, it transitions the flow to
-   closing state.  The device will forward packets in both directions
-   for flows in the closing state within a timeout interval TO_CLOSING;
-   these packets will not reset the timer.  See Section 2.3.2 for
-   details.
+   stopping state.  The device will forward packets in both directions
+   for flows in the stopping state within a timeout interval
+   TO_STOPPING; these packets will not reset the timer.
 
    Note that even though the S flag is integrity-protected end to end, a
    packet with the S flag set could be forged by one on-path device to
-   drive the flow into half-close state on all downstream devices.
-   However, this attack is of severely limited utility.  First, it would
-   require coordination between attackers on both sides of a given on-
-   path device in order to forge a confirmation of the stop signal - a
-   flag with the S bit set and a valid PSE corresponding to the PSN of
-   the first stop signal to drive the flow into closing state.  Second,
+   drive the flow into stop-wait state on all downstream devices.
+   However, this forgery is of severely limited utility.  First, it
+   would require coordination between attackers on both sides of a given
+   on-path device in order to forge a confirmation of the stop signal -
+   a flag with the S bit set and a valid PSE corresponding to the PSN of
+   the first stop signal to drive the flow into stopping state.  Second,
    the information in the Basic Header on each packet will drive the
    state machine into associated state even in the middle of a flow,
    enabling fast recovery even in the case of such a coordinated attack.
 
+
+
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 7]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
 2.3.3.  State Rebinding
 
-   A PLUS-aware on-path device forwarding a packet for a flow in the
-   zero state, where one of the endpoint identifiers (address and port)
-   and the CAT, but not the other endpoint identifier, match a flow in a
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 8]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
-
-   non-zero state, accounts that packet to the existing flow, updating
-   the changed endpoint identifier.  This allows fast rebinding of state
-   in case of changes in network address translation or connectivity of
-   the sender.
+   One end of a PLUS association may change its address while
+   maintaining on-path state; e.g. due to a NAT change.  A PLUS-aware
+   on-path device that forwards a packet for a flow in the zero state,
+   where one of the endpoint identifiers (address and port) and the CAT,
+   but not the other endpoint identifier, match a flow in a non-zero
+   state, treats that packet as belonging to the existing flow, and
+   updates the endpoint identifier.
 
 2.4.  Measurement and Diagnosis using the Basic Header
 
    The basic header trivially supports passive two-way delay measurement
-   as well as partial loss estimation at a single observation point.
+   as well as partial loss estimation at a single observation point on
+   path.
 
    To calculate two-way delay, an observation point calculates the delay
    between seeing a PSN and a corresponding PSE in each direction, then
    adds the delays from each direction together.  The fact that the PSN
-   increments by one for every packet, including packets carrying
-   retransmitted data or only control traffic, makes this measurement
-   much simpler than the equivalent measurement using TCP sequence and
+   increments by one for every packet makes this measurement much
+   simpler than the equivalent measurement using TCP sequence and
    acknowledgment numbers.
 
-   To calculate loss upstream from an observation point in each
-   direction, the observation point simply counts skips in the PSN
-   number space.  Since PLUS does not expose information about
+   [EDITOR'S NOTE: specify this fully.]
+
+   Loss and reordering upstream from an observation point in each
+   direction can be estimated through examination of the PSN sequence
+   observed.  A skipped PSN not seen within a specified interval can be
+   counted as a lost packet, and the extent of reordering estimated by
+   the degree of skipping seen in those skipped PSNs that are later
+   observed.  Since PLUS does not expose information about
    retransmissions (and, indeed, may not even carry a transport that
    uses retransmission for loss recovery), loss downstream from the
    observation point cannot be observed.
@@ -479,18 +433,38 @@ Internet-Draft                  PLUS Spec                  December 2016
 
    Additional facilities for communicating with on-path devices under
    endpoint control are provided by the PLUS Extended Header.  The
-   extended header shares the layout of its first 21 bytes with the PLUS
-   Basic Header, except the Extended Header bit (0x40 on byte 20) is
+   extended header shares the layout of its first 20 bytes with the PLUS
+   Basic Header, except the Extended Header bit (0x01 on byte 11) is
    set.  As with the Basic Header, overlying transports are presumed to
    provide encryption and integrity protection for the PLUS Extended
-   Header.
+   Header.  The Extended Header has three extra fields:
 
-   The Extended Header shown in Figure 3 provides for a single Sender to
-   Path or Path to Receiver information element, as in
-   [I-D.trammell-plus-abstract-mech], to appear on the packet, within a
-   Path Communication Field.  PCF Type information is carried in Byte 21
-   of the header, with the length of the PCF value to be determined by
-   its type.
+   o  PCF Length: an 8-byte value defining the length of the PCF value,
+      from 0 to
+
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 8]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
+      1.  Add 22 to this value to get the offset of the PLUS payload
+          (i.e., the overlying transport header).  The PLUS Extended
+          Header is therefore 22 to 277 octets long.
+
+   o  P bit: If set, the PCF is a Path to Receiver PCF, to be written by
+      devices along the path, and its presence and length (but not
+      content) will be integrity-protected end-to-end.  If clear, the
+      PCF is a Sender to Path PCF, and its presence, length, and content
+      will be integrity-protected end-to-end.
+
+   o  X bit: Reserved for future extension of the PCF type system.
+
+   o  PCF Type: a 6-byte value defining the type of the PCF value; there
+      are therefore 64 distinct Sender to Path and 64 distinct Path to
+      Receiver PCFs available.
 
    Further details of PCF encoding are not yet defined in this revision
    of the specification; the remainder of this section discusses the
@@ -501,9 +475,35 @@ Internet-Draft                  PLUS Spec                  December 2016
 
 
 
-Trammell & Kuehlewind     Expires June 26, 2017                 [Page 9]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017               [Page 9]
 
-Internet-Draft                  PLUS Spec                  December 2016
+Internet-Draft                  PLUS Spec                     March 2017
 
 
      3                   2                   1
@@ -512,9 +512,9 @@ Internet-Draft                  PLUS Spec                  December 2016
    |       UDP source port        |      UDP destination port     |
    +------------------------------+-------------------------------+
    |       UDP length             |      UDP checksum             |
-   +------------------------------+-------------------------------+
-   |                            magic                             |
-   +--------------------------------------------------------------+
+   +------------------------------+-----------------------+-+-+-+-+
+   |                            magic                     |L|R|S|1|
+   +------------------------------------------------------+-+-+-+-+
    |                                                              |
    +-             connection/association token CAT               -+
    |                                                              |
@@ -522,18 +522,18 @@ Internet-Draft                  PLUS Spec                  December 2016
    |                 packet serial number  PSN                    |
    +--------------------------------------------------------------+
    |                 packet serial echo    PSE                    |
-   +-+-+-+-+-------+---------------+------------------------------+
-   |S|1|L|R|  ign  |    PCF Type   |                              /
-   +-+-+-+-+-------+---------------+                              \
+   +---------------+-+-+-----------+------------------------------+
+   |   PCF Length  |P|X| PCF Type  |                              /
+   +---------------+-+-+-----------+                              \
    \                                                              /
-   /                 PCF value (variable-length)                  \
+   /                    PCF  (variable-length)                    \
    \                                                              /
    +--------------------------------------------------------------+
    /                                                              \
    \         transport protocol header/payload (encrypted)        /
    /                                                              \
 
-         Figure 3: PLUS extended header (conceptual; details TBD)
+                      Figure 3: PLUS extended header
 
    As described in [I-D.trammell-plus-abstract-mech], there are two
    types of signals: Path to Receiver signals, which allow devices along
@@ -557,9 +557,9 @@ Internet-Draft                  PLUS Spec                  December 2016
 
 
 
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 10]
+Trammell & Kuehlewind   Expires September 8, 2017              [Page 10]
 
-Internet-Draft                  PLUS Spec                  December 2016
+Internet-Draft                  PLUS Spec                     March 2017
 
 
 3.1.  Measurement and Diagnostics using the Extended Header
@@ -569,13 +569,17 @@ Internet-Draft                  PLUS Spec                  December 2016
    signals are advisory only, and should not be presumed by either the
    endpoints or devices along the path to affect forwarding behavior.
 
+   o  Packet number echo delta time.  Exposes the interval between the
+      receipt of the packet whose number appears in the PSE and the
+      transmission of this packet, as in section 4.1.2 of [IPIM].
+      Together with analysis of the PSN and PSE sequence, this allows
+      high-precision RTT estimation.
+
    o  Timestamp and timestamp echo.  Similar to TCP timestamps in
-      [RFC7323], also encoding a delta between receipt of last timestamp
-      and transmission of echo as in section 4.1.2 of [IPIM].  Allows
-      constant-rate clock exposure to devices on path.  Note that this
-      is less necessary for RTT measurement of one-sided flows than it
-      is in TCP, due to the properties of the PSN and PSE values in the
-      Basic Header.
+      [RFC7323], allows constant-rate clock exposure to devices on path.
+      Note that this is less necessary for RTT measurement of one-sided
+      flows than it is in TCP, due to the properties of the PSN and PSE
+      values in the Basic Header.
 
    We have identified the following path to receiver signals as
    potentially useful.  Note that accumulated values for use at the
@@ -589,7 +593,9 @@ Internet-Draft                  PLUS Spec                  December 2016
       information from PLUS-aware devices.  The sender sets the initial
       value to the sender's MTU.  A PLUS-aware forwarding device on path
       receiving this value fills in the minimum of the received value
-      and the MTU of the next hop into this field.
+      and the MTU of the next hop into this field.  The information,
+      when fed back to the sender, can be used as a hint for a running
+      PLPMTUD [RFC4821] process.
 
    o  State timeout accumulator.  This signal allows measurement of
       timeouts from PLUS-aware devices.  It is initialized to a maximum
@@ -605,19 +611,18 @@ Internet-Draft                  PLUS Spec                  December 2016
       value and the rate limit to which this flow is subject into this
       field.
 
+
+
+Trammell & Kuehlewind   Expires September 8, 2017              [Page 11]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    o  Trace accumulator.  This signal allows exposure of a trace of
       PLUS-aware devices on path, similar to the Path Changes mechanism
       in section 4.3 of [IPIM].  The sender initializes the value to a
       value chosen randomly for the flow; all packets in the flow using
       path trace accumulator must use the same initial value.  A PLUS-
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 11]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
-
       aware forwarding device on path receiving this value fills in the
       result of XORing the received value with a randomly chosen device
       identifier, which it must use for all path trace accumulator
@@ -634,7 +639,40 @@ Internet-Draft                  PLUS Spec                  December 2016
 
 5.  Security Considerations
 
-   [EDITOR'S NOTE: write me]
+   This document describes the PLUS Basic and Extended Headers, and the
+   protocol they support.  This protocol can be used to expose
+   information to devices along the path to replace the analysis of
+   transport- and application-layer headers when those headers are
+   encrypted.  Care must be taken in the exposure of such information to
+   ensure no irrelevant application and/or user confidential information
+   is exposed.
+
+   PLUS itself contains some security-relevant features.  In concert
+   with an encrypted overlying transport, the PLUS Basic and Extended
+   Headers are integrity-protected to prevent manipulation on-path of
+   any value except Path to Receiver values; this integrity protection
+   prevents Path to Receiver values from being injected without explicit
+   sender involvement, or from being stripped from the PLUS Extended
+   Header.
+
+   The CAT and PSE described in Section 2 taken together, provide
+   entropy to prevent on-path devices from being driven into incorrect
+   states by off-path attackers.  Bidirectional stop signaling as in
+   Section 2.3.2 requires an on-path attacker of a given middlebox to
+   forge traffic on both of the middlebox's interfaces to drive a
+   middlebox to inappropriately drop state for a flow.
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017              [Page 12]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
 
 6.  Acknowledgments
 
@@ -652,8 +690,8 @@ Internet-Draft                  PLUS Spec                  December 2016
 
    [I-D.ietf-quic-transport]
               Iyengar, J. and M. Thomson, "QUIC: A UDP-Based Multiplexed
-              and Secure Transport", draft-ietf-quic-transport-00 (work
-              in progress), November 2016.
+              and Secure Transport", draft-ietf-quic-transport-01 (work
+              in progress), January 2017.
 
    [I-D.trammell-plus-abstract-mech]
               Trammell, B., "Abstract Mechanisms for a Cooperative Path
@@ -666,17 +704,9 @@ Internet-Draft                  PLUS Spec                  December 2016
               draft-trammell-plus-statefulness-02 (work in progress),
               December 2016.
 
-
-
-
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 12]
-
-Internet-Draft                  PLUS Spec                  December 2016
-
-
-   [IPIM]     Allman, M., Beverly, R., and B. Trammell, "In-Protocol
-              Internet Measurement (arXiv preprint 1612.02902)",
-              December 2016.
+   [IPIM]     Allman, M., Beverly, R., and B. Trammell, "Principles for
+              Measurability in Protocol Design (arXiv preprint
+              1612.02902)", December 2016.
 
    [RFC0793]  Postel, J., "Transmission Control Protocol", STD 7,
               RFC 793, DOI 10.17487/RFC0793, September 1981,
@@ -688,6 +718,18 @@ Internet-Draft                  PLUS Spec                  December 2016
               DOI 10.17487/RFC2474, December 1998,
               <http://www.rfc-editor.org/info/rfc2474>.
 
+   [RFC4821]  Mathis, M. and J. Heffner, "Packetization Layer Path MTU
+              Discovery", RFC 4821, DOI 10.17487/RFC4821, March 2007,
+              <http://www.rfc-editor.org/info/rfc4821>.
+
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017              [Page 13]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    [RFC7323]  Borman, D., Braden, B., Jacobson, V., and R.
               Scheffenegger, Ed., "TCP Extensions for High Performance",
               RFC 7323, DOI 10.17487/RFC7323, September 2014,
@@ -697,6 +739,11 @@ Internet-Draft                  PLUS Spec                  December 2016
               Thomson, "Session Traversal Utilities for NAT (STUN) Usage
               for Consent Freshness", RFC 7675, DOI 10.17487/RFC7675,
               October 2015, <http://www.rfc-editor.org/info/rfc7675>.
+
+   [RFC8035]  Holmberg, C., "Session Description Protocol (SDP) Offer/
+              Answer Clarifications for RTP/RTCP Multiplexing",
+              RFC 8035, DOI 10.17487/RFC8035, November 2016,
+              <http://www.rfc-editor.org/info/rfc8035>.
 
 Authors' Addresses
 
@@ -725,4 +772,13 @@ Authors' Addresses
 
 
 
-Trammell & Kuehlewind     Expires June 26, 2017                [Page 13]
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind   Expires September 8, 2017              [Page 14]
