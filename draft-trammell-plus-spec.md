@@ -346,34 +346,43 @@ cannot be observed.
 # Path Communication: Extended Header {#extended-header}
 
 Additional facilities for communicating with on-path devices under endpoint
-control are provided by the PLUS Extended Header. The extended header shares
-the layout of its first 20 bytes with the PLUS Basic Header, except the
-Extended Header bit (0x01 on byte 11) is set. As with the Basic Header,
-overlying transports are presumed to provide encryption and integrity
-protection for the PLUS Extended Header. The Extended Header has three extra
-fields:
+control are provided by the PLUS Extended Header. The extended header shares the
+layout of its first 20 bytes with the PLUS Basic Header, except the Extended
+Header bit (0x01 on byte 11) is set. As with the Basic Header, overlying
+transports are presumed to provide encryption and integrity protection for the
+PLUS Extended Header. The Extended Header has in 21-byte, 22-byte, 24-byte, and
+variable-length variants, and three to four additional fields:
 
-- PCF Length: an 8-byte value defining the length of the PCF value, from 0 to
-  255. Add 22 to this value to get the offset of the PLUS payload (i.e., the
-  overlying transport header). The PLUS Extended Header is therefore 22 to 277
-  octets long.
+- C codepoint (PCF class): a two-bit value defining the class of the PCF value,
+  and therefore its treatment at middleboxes and endpoints. It has the following values:
+    - 00: sender to path signal: the class, length, type, and content of the PCF
+      value are integrity protected end-to-end.
+    - 01: path to receiver signal: the class, length, and type of the PCF value
+      are integrity protected end to end, but not the content of the value; for
+      integrity protection purposes, it is assumed to be all zeroes.
+    - 10: reserved for a future revision of this specification.
+    - 11: reserved for a future revision of this specification.
 
-- P bit: If set, the PCF is a Path to Receiver PCF, to be written by devices
-  along the path, and its presence and length (but not content) will be
-  integrity-protected end-to-end. If clear, the PCF is a Sender to Path PCF, and
-  its presence, length, and content will be integrity-protected end-to-end.
+- L codepoint (PCF length): a two-bit value encoding the length of the PCF
+  value. It has the following values:
+    - 00: 0 bytes. See {{fig-header-pcf0}} for the header layout. Zero-length
+      PCFs are used to carry marking information on a packet or flow in the PCF
+      Type field only.
+    - 01: 1 byte. See {{fig-header-pcf1}} for the header layout.
+    - 10: 3 bytes. See {{fig-header-pcf3}} for the header layout.
+    - 11: Variable length; byte 21 contains the length of the PCF value, 0-255.
+      See {{fig-header-pcfv}}.
 
-- X bit: Reserved for future extension of the PCF type system.
+- PCF Type: a 4-bit value defining the type and semantics of the PCF value,
+  scoped to the L and C codepoints (i.e., PCF Type 1 with C=00 and L=00 has a
+  distinct meaning from PCF Type 1 with C=00 and L=01). The C, L, and Type
+  fields are expressed as a single byte in the subsections below. For example,
+  0x01 is C=00, L=00, type 1, a zero-length sender-to-path mark; and 0x61 is
+  C=01, L=10, type 1, a 3-byte path-to-receiver signal.
 
-- PCF Type: a 6-byte value defining the type of the PCF value; there are
-  therefore 64 distinct Sender to Path and 64 distinct Path to Receiver PCFs
-  available.
-
-Further details of PCF encoding are not yet defined in this revision of the
-specification; the remainder of this section discusses the types of
-information elements to be supported. The exact encoding of PCF type and value
-information are to be derived from an analysis of the requirements of these
-Information Elements.
+- PCF Value: a 1-byte, 3-byte, or variable-length field, according to the value
+  of the L codepoint, containing a value of the type described in the PCF Type
+  field.
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -392,35 +401,105 @@ Information Elements.
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+---------------+-+-+-----------+------------------------------+
-|   PCF Length  |P|X| PCF Type  |                              /
-+---------------+-+-+-----------+                              \
++---+---+-------+---------------+------------------------------+
+| C | 0 | Type  |                                              /
++---+---+-------+                                              \
 \                                                              /
-/                    PCF  (variable-length)                    \
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
+~~~~~~~~~~~~~
+{: #fig-header-pcf0 title="PLUS extended header with 0-byte PCF"}
+
+~~~~~~~~~~~~~
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|1|
++------------------------------------------------------+-+-+-+-+
+|                                                              |
++-             connection/association token CAT               -+
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++---+---+-------+---------------+------------------------------+
+| C | 1 | Type  |   PCF value   |                              /
++---+---+-------+---------------+                              \
+\                                                              /
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
+~~~~~~~~~~~~~
+{: #fig-header-pcf1 title="PLUS extended header with 1-byte PCF"}
+
+~~~~~~~~~~~~~
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|1|
++------------------------------------------------------+-+-+-+-+
+|                                                              |
++-             connection/association token CAT               -+
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++---+---+-------+---------------+------------------------------+
+| C | 2 | Type  |   PCF value   |                              /
++---+---+-------+---------------+                              \
+\                                                              /
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
+~~~~~~~~~~~~~
+{: #fig-header-pcf3 title="PLUS extended header with 3-byte PCF"}
+
+~~~~~~~~~~~~~
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|1|
++------------------------------------------------------+-+-+-+-+
+|                                                              |
++-             connection/association token CAT               -+
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++---+---+-------+---------------+------------------------------+
+| C | 3 | Type  |   PCF length  |                              /
++---+---+-------+---------------+      PCF value (varlen)      \
 \                                                              /
 +--------------------------------------------------------------+
-/                                                              \
-\         transport protocol header/payload (encrypted)        /
-/                                                              \
+\                                                              /
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
 ~~~~~~~~~~~~~
-{: #fig-header-pcf title="PLUS extended header"}
+{: #fig-header-pcfv title="PLUS extended header with variable-length PCF"}
 
-As described in {{I-D.trammell-plus-abstract-mech}}, there are two types of
-signals: Path to Receiver signals, which allow devices along the path to
-provide information about the path or its treatment of the flow to the
-receiver; and Sender to Path signals, which allow the sender to expose
-information about itself or the flow to the path. Path to Receiver signals are
-treated specially by header integrity protection, as their values, but not
-length or type, may be changed by devices on path: the value of a given path-
-to-receiver signal is assumed to be an appropriately sized array of zero bytes
-by the integrity protection facility.
+Sender to Path signals are generally used to expose information about the
+traffic for measurement or diagnostic purposes. Path to Receiver signals
+generally take the form of accumulators: initialized to some value by the
+sender, and subject to some aggregation function by each on-path device that
+understands them. In any case, the information sent and received is to be
+treated as advisory only.
 
-Path to Receiver signals generally take the form of accumulators: initialized
-to some value by the sender, and subject to some aggregation function by each
-on-path device that understands them. Sender to Path signals are generally
-used to expose information about the traffic for measurement or diagnostic
-purposes. In any case, the information sent and received is to be treated as
-advisory only.
+Note that since C codepoints 00 and 01 imply identical treatment for zero-length
+(L codepoint 00) PCF values, both (i.e., type bytes 0x00 - 0x0f and 0x40 - 0x4f)
+are used for sender-to-path packet marking.
 
 ## Measurement and Diagnostics using the Extended Header
 
@@ -429,15 +508,20 @@ for measurement and diagnostic purposes. These signals are advisory only, and
 should not be presumed by either the endpoints or devices along the path to
 affect forwarding behavior.
 
-- Packet number echo delta time. Exposes the interval between the receipt of
-the packet whose number appears in the PSE and the transmission of this packet,
-as in section 4.1.2 of {{IPIM}}. Together with analysis of the PSN and PSE
-sequence, this allows high-precision RTT estimation.
+- Packet number echo delta time (Type 0x21, 3-byte sender to path) Exposes the
+interval between the receipt of the packet whose number appears in the PSE and
+the transmission of this packet, as in section 4.1.2 of {{IPIM}}. Together with
+analysis of the PSN and PSE sequence, this allows high-precision RTT estimation.
+The encoding of this field is TBD.
 
-- Timestamp and timestamp echo. Similar to TCP timestamps in {{RFC7323}},
-allows constant-rate clock exposure to devices on path. Note that this is less
-necessary for RTT measurement of one-sided flows than it is in TCP, due to the
-properties of the PSN and PSE values in the Basic Header.
+- Timestamp (Type 0x22, 3-byte sender to path). Similar to TCP timestamps in
+{{RFC7323}}, allows constant-rate clock exposure to devices on path. Note that
+this is less necessary for RTT measurement of one-sided flows than it is in TCP,
+due to the properties of the PSN and PSE values in the Basic Header. [EDITOR'S
+NOTE: is this useful enough to keep?]
+
+- Timestamp Echo (Type 0x23, 3-byte sender to path). Echo of the last received
+  timestamp, as above. [EDITOR'S NOTE: is this useful enough to keep?]
 
 We have identified the following path to receiver signals as potentially
 useful. Note that accumulated values for use at the sender must be fed back to
@@ -446,34 +530,38 @@ devices on path at breaks in MTU mean that the accumulated value can only be
 used as a hint to processes for measurement and discovery of the accumulated
 values at the sender.
 
-- MTU accumulator. This signal allows measurement of MTU information from
-  PLUS-aware devices. The sender sets the initial value to the sender's MTU. A
-  PLUS-aware forwarding device on path receiving this value fills in the
-  minimum of the received value and the MTU of the next hop into this field. The information, when fed back to the sender, can be used as a hint for a running PLPMTUD {{RFC4821}} process.
+- State timeout accumulator (Type 0x51, 1-byte path to receiver): This signal
+  allows measurement of timeouts from PLUS-aware devices. It is initialized to a
+  maximum ("no information") value by the sender. A PLUS-aware forwarding device
+  on path receiving this value fills in the minimum of the received value and
+  the configured timeout for the flow's present state into this field. The
+  encoding of this field is TBD.
 
-- State timeout accumulator. This signal allows measurement of timeouts
-  from PLUS-aware devices. It is initialized to a maximum ("no information")
-  value by the sender. A PLUS-aware forwarding device on path receiving this
-  value fills in the minimum of the received value and the configured timeout
-  for the flow's present state into this field.
+- Rate limit accumulator (Type 0x52, 1-byte path to receiver): This signal
+  allows exposure of rate limiting along the path. It is initialized to a
+  maximum ("no information") value by the sender. A PLUS-aware forwarding device
+  on path receiving this value fills in the minimum of the received value and
+  the rate limit to which this flow is subject into this field. The encoding of
+  this field is TBD.
 
-- Rate limit accumulator. This signal allows exposure of rate limiting
-  along the path. It is initialized to a maximum ("no information") value by
-  the sender. A PLUS-aware forwarding device on path receiving this value
-  fills in the minimum of the received value and the rate limit to which this 
-  flow is subject into this field.
+- MTU accumulator (Type 0x61, 3-byte path to receiver): This signal allows
+  measurement of MTU information from PLUS-aware devices. The sender sets the
+  initial value to the sender's MTU. A PLUS-aware forwarding device on path
+  receiving this value fills in the minimum of the received value and the MTU of
+  the next hop, in bytes into this field. The information, when fed back to the sender,
+  can be used as a hint for a running PLPMTUD {{RFC4821}} process.
 
-- Trace accumulator. This signal allows exposure of a trace of PLUS-aware
-  devices on path, similar to the Path Changes mechanism in section 4.3 of
-  {{IPIM}}. The sender initializes the value to a value chosen randomly for the
-  flow; all packets in the flow using path trace accumulator must use the same
-  initial value. A PLUS-aware forwarding device on path receiving this value
-  fills in the result of XORing the received value with a randomly chosen device
-  identifier, which it must use for all path trace accumulator signals it
-  participates in. Packets traversing the same set of PLUS-aware forwarding
-  devices in the same flow therefore arrive at the receiver with the same
-  accumulated value, and changes to the set of devices on path can be detected
-  by the receiver.
+- Trace accumulator (Type 0x71, varlen path to receiver). This signal allows
+  exposure of a trace of PLUS-aware devices on path, similar to the Path Changes
+  mechanism in section 4.3 of {{IPIM}}. The sender initializes the value to a
+  value chosen randomly for the flow; all packets in the flow using path trace
+  accumulator must use the same initial value. A PLUS-aware forwarding device on
+  path receiving this value fills in the result of XORing the received value
+  with a randomly chosen device identifier, which it must use for all path trace
+  accumulator signals it participates in. Packets traversing the same set of
+  PLUS-aware forwarding devices in the same flow therefore arrive at the
+  receiver with the same accumulated value, and changes to the set of devices on
+  path can be detected by the receiver.
 
 # IANA Considerations
 
@@ -507,6 +595,8 @@ interfaces to drive a middlebox to inappropriately drop state for a flow.
 
 This work is partially supported by the European Commission under Horizon 2020
 grant agreement no. 688421 Measurement and Architecture for a Middleboxed
-Internet (MAMI), and by the Swiss State Secretariat for Education, Research,
-and Innovation under contract no. 15.0268. This support does not imply
-endorsement.
+Internet (MAMI), and by the Swiss State Secretariat for Education, Research, and
+Innovation under contract no. 15.0268. This support does not imply endorsement.
+Thanks to Ted Hardie, Joe Hildebrand, Mark Nottingham, and the participants of
+the PLUS BoF at IETF 96 in Berlin for input leading to this design; and to Gorry
+Fairhurst for the detailed review.
