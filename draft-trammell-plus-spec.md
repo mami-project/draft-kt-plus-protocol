@@ -350,7 +350,7 @@ control are provided by the PLUS Extended Header. The extended header shares the
 layout of its first 20 bytes with the PLUS Basic Header, except the Extended
 Header bit (0x01 on byte 11) is set. As with the Basic Header, overlying
 transports are presumed to provide encryption and integrity protection for the
-PLUS Extended Header. The Extended Header has in 21-byte, 22-byte, 24-byte, and
+PLUS Extended Header. The Extended Header has 1-byte, 2-byte, 4-byte, and
 variable-length variants, and three to four additional fields:
 
 - C codepoint (PCF class): a two-bit value defining the class of the PCF value,
@@ -380,7 +380,9 @@ variable-length variants, and three to four additional fields:
   0x01 is C=00, L=00, type 1, a zero-length sender-to-path mark; and 0x61 is
   C=01, L=10, type 1, a 3-byte path-to-receiver signal.
 
-- PCF Value: a 1-byte, 3-byte, or variable-length field, according to the value
+- PCF Length (only for L=11): a one bit field indicating the length of the variable length value field.
+
+- PCF Value (not for L=00): a 1-byte, 3-byte, or variable-length field, according to the value
   of the L codepoint, containing a value of the type described in the PCF Type
   field.
 
@@ -453,9 +455,9 @@ variable-length variants, and three to four additional fields:
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+---+---+-------+---------------+------------------------------+
-| C | 2 | Type  |   PCF value   |                              /
-+---+---+-------+---------------+                              \
++---+---+-------+----------------------------------------------+
+| C | 2 | Type  |                  PCF value                   |
++---+---+-------+----------------------------------------------+
 \                                                              /
 /         transport protocol header/payload (encrypted)        \
 \                                                              /
