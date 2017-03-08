@@ -273,7 +273,7 @@ address {
   .github-fork-ribbon-wrapper {
     position: fixed;
   }
-  /*]]>*/</style>
+/*]]>*/</style>
 
 
   <link href="#rfc.toc" rel="Contents"/>
@@ -295,12 +295,12 @@ address {
 <link href="#rfc.authors" rel="Chapter"/>
 
 
-  <meta name="generator" content="xml2rfc version 2.5.2 - http://tools.ietf.org/tools/xml2rfc" />
+  <meta name="generator" content="xml2rfc version 2.5.1 - http://tools.ietf.org/tools/xml2rfc" />
   <link rel="schema.dct" href="http://purl.org/dc/terms/" />
 
   <meta name="dct.creator" content="Trammell, B. and M. Kuehlewind" />
   <meta name="dct.identifier" content="urn:ietf:id:draft-trammell-plus-spec-01" />
-  <meta name="dct.issued" scheme="ISO8601" content="2017-3-07" />
+  <meta name="dct.issued" scheme="ISO8601" content="2017-3-08" />
   <meta name="dct.abstract" content="This document specifies a common Path Layer UDP Substrate (PLUS) wire image for encrypted transport protocols carried over UDP. The base PLUS header carries information for driving a minimal state machine at middleboxes described in " />
   <meta name="description" content="This document specifies a common Path Layer UDP Substrate (PLUS) wire image for encrypted transport protocols carried over UDP. The base PLUS header carries information for driving a minimal state machine at middleboxes described in " />
 
@@ -324,8 +324,8 @@ address {
   <td class="right">ETH Zurich</td>
 </tr>
 <tr>
-  <td class="left">Expires: September 8, 2017</td>
-  <td class="right">March 07, 2017</td>
+  <td class="left">Expires: September 9, 2017</td>
+  <td class="right">March 08, 2017</td>
 </tr>
 
     	
@@ -345,7 +345,7 @@ address {
 <p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
 <p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at http://datatracker.ietf.org/drafts/current/.</p>
 <p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
-<p>This Internet-Draft will expire on September 8, 2017.</p>
+<p>This Internet-Draft will expire on September 9, 2017.</p>
 <h1 id="rfc.copyrightnotice">
   <a href="#rfc.copyrightnotice">Copyright Notice</a>
 </h1>
@@ -499,18 +499,17 @@ address {
 <p id="rfc.section.2.4.p.3">[EDITOR&#8217;S NOTE: specify this fully.]</p>
 <p id="rfc.section.2.4.p.4">Loss and reordering upstream from an observation point in each direction can be estimated through examination of the PSN sequence observed. A skipped PSN not seen within a specified interval can be counted as a lost packet, and the extent of reordering estimated by the degree of skipping seen in those skipped PSNs that are later observed. Since PLUS does not expose information about retransmissions (and, indeed, may not even carry a transport that uses retransmission for loss recovery), loss downstream from the observation point cannot be observed.</p>
 <h1 id="rfc.section.3"><a href="#rfc.section.3">3.</a> <a href="#extended-header" id="extended-header">Path Communication: Extended Header</a></h1>
-<p id="rfc.section.3.p.1">Additional facilities for communicating with on-path devices under endpoint control are provided by the PLUS Extended Header. The extended header shares the layout of its first 20 bytes with the PLUS Basic Header, except the Extended Header bit (0x01 on byte 11) is set. As with the Basic Header, overlying transports are presumed to provide encryption and integrity protection for the PLUS Extended Header. The Extended Header has three extra fields:</p>
+<p id="rfc.section.3.p.1">Additional facilities for communicating with on-path devices under endpoint control are provided by the PLUS Extended Header. The extended header shares the layout of its first 20 bytes with the PLUS Basic Header, except the Extended Header bit (0x01 on byte 11) is set. As with the Basic Header, overlying transports are presumed to provide encryption and integrity protection for the PLUS Extended Header. The Extended Header has in 21-byte, 22-byte, 24-byte, and variable-length variants, and three to four additional fields:</p>
 <p/>
 
 <ul>
-  <li>PCF Length: an 8-byte value defining the length of the PCF value, from 0 to <ol><li>Add 22 to this value to get the offset of the PLUS payload (i.e., the overlying transport header). The PLUS Extended Header is therefore 22 to 277 octets long.</li></ol></li>
-  <li>P bit: If set, the PCF is a Path to Receiver PCF, to be written by devices along the path, and its presence and length (but not content) will be integrity-protected end-to-end. If clear, the PCF is a Sender to Path PCF, and its presence, length, and content will be integrity-protected end-to-end.</li>
-  <li>X bit: Reserved for future extension of the PCF type system.</li>
-  <li>PCF Type: a 6-byte value defining the type of the PCF value; there are therefore 64 distinct Sender to Path and 64 distinct Path to Receiver PCFs available.</li>
+  <li>C codepoint (PCF class): a two-bit value defining the class of the PCF value, and therefore its treatment at middleboxes and endpoints. It has the following values: <ul><li>00: sender to path signal: the class, length, type, and content of the PCF value are integrity protected end-to-end.</li><li>01: path to receiver signal: the class, length, and type of the PCF value are integrity protected end to end, but not the content of the value; for integrity protection purposes, it is assumed to be all zeroes.</li><li>10: reserved for a future revision of this specification.</li><li>11: reserved for a future revision of this specification.</li></ul></li>
+  <li>L codepoint (PCF length): a two-bit value encoding the length of the PCF value. It has the following values: <ul><li>00: 0 bytes. See <a href="#fig-header-pcf0">Figure 3</a> for the header layout. Zero-length PCFs are used to carry marking information on a packet or flow in the PCF Type field only.</li><li>01: 1 byte. See <a href="#fig-header-pcf1">Figure 4</a> for the header layout.</li><li>10: 3 bytes. See <a href="#fig-header-pcf3">Figure 5</a> for the header layout.</li><li>11: Variable length; byte 21 contains the length of the PCF value, 0-255.  See <a href="#fig-header-pcfv">Figure 6</a>.</li></ul></li>
+  <li>PCF Type: a 4-bit value defining the type and semantics of the PCF value, scoped to the L and C codepoints (i.e., PCF Type 1 with C=00 and L=00 has a distinct meaning from PCF Type 1 with C=00 and L=01). The C, L, and Type fields are expressed as a single byte in the subsections below. For example, 0x01 is C=00, L=00, type 1, a zero-length sender-to-path mark; and 0x61 is C=01, L=10, type 1, a 3-byte path-to-receiver signal.</li>
+  <li>PCF Value: a 1-byte, 3-byte, or variable-length field, according to the value of the L codepoint, containing a value of the type described in the PCF Type field.</li>
 </ul>
-<p id="rfc.section.3.p.3">Further details of PCF encoding are not yet defined in this revision of the specification; the remainder of this section discusses the types of information elements to be supported. The exact encoding of PCF type and value information are to be derived from an analysis of the requirements of these Information Elements.</p>
 <div id="rfc.figure.3"/>
-<div id="fig-header-pcf"/>
+<div id="fig-header-pcf0"/>
 <pre>
   3                   2                   1
 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
@@ -528,36 +527,116 @@ address {
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+---------------+-+-+-----------+------------------------------+
-|   PCF Length  |P|X| PCF Type  |                              /
-+---------------+-+-+-----------+                              \
++---+---+-------+---------------+------------------------------+
+| C | 0 | Type  |                                              /
++---+---+-------+                                              \
 \                                                              /
-/                    PCF  (variable-length)                    \
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
+</pre>
+<p class="figure">Figure 3: PLUS extended header with 0-byte PCF</p>
+<div id="rfc.figure.4"/>
+<div id="fig-header-pcf1"/>
+<pre>
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|1|
++------------------------------------------------------+-+-+-+-+
+|                                                              |
++-             connection/association token CAT               -+
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++---+---+-------+---------------+------------------------------+
+| C | 1 | Type  |   PCF value   |                              /
++---+---+-------+---------------+                              \
+\                                                              /
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
+</pre>
+<p class="figure">Figure 4: PLUS extended header with 1-byte PCF</p>
+<div id="rfc.figure.5"/>
+<div id="fig-header-pcf3"/>
+<pre>
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|1|
++------------------------------------------------------+-+-+-+-+
+|                                                              |
++-             connection/association token CAT               -+
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++---+---+-------+---------------+------------------------------+
+| C | 2 | Type  |   PCF value   |                              /
++---+---+-------+---------------+                              \
+\                                                              /
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
+</pre>
+<p class="figure">Figure 5: PLUS extended header with 3-byte PCF</p>
+<div id="rfc.figure.6"/>
+<div id="fig-header-pcfv"/>
+<pre>
+  3                   2                   1
+1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++------------------------------+-------------------------------+
+|       UDP source port        |      UDP destination port     |
++------------------------------+-------------------------------+
+|       UDP length             |      UDP checksum             |
++------------------------------+-----------------------+-+-+-+-+
+|                            magic                     |L|R|S|1|
++------------------------------------------------------+-+-+-+-+
+|                                                              |
++-             connection/association token CAT               -+
+|                                                              |
++--------------------------------------------------------------+
+|                 packet serial number  PSN                    |
++--------------------------------------------------------------+
+|                 packet serial echo    PSE                    |
++---+---+-------+---------------+------------------------------+
+| C | 3 | Type  |   PCF length  |                              /
++---+---+-------+---------------+      PCF value (varlen)      \
 \                                                              /
 +--------------------------------------------------------------+
-/                                                              \
-\         transport protocol header/payload (encrypted)        /
-/                                                              \
+\                                                              /
+/         transport protocol header/payload (encrypted)        \
+\                                                              /
 </pre>
-<p class="figure">Figure 3: PLUS extended header</p>
-<p id="rfc.section.3.p.4">As described in <a href="#I-D.trammell-plus-abstract-mech">[I-D.trammell-plus-abstract-mech]</a>, there are two types of signals: Path to Receiver signals, which allow devices along the path to provide information about the path or its treatment of the flow to the receiver; and Sender to Path signals, which allow the sender to expose information about itself or the flow to the path. Path to Receiver signals are treated specially by header integrity protection, as their values, but not length or type, may be changed by devices on path: the value of a given path- to-receiver signal is assumed to be an appropriately sized array of zero bytes by the integrity protection facility.</p>
-<p id="rfc.section.3.p.5">Path to Receiver signals generally take the form of accumulators: initialized to some value by the sender, and subject to some aggregation function by each on-path device that understands them. Sender to Path signals are generally used to expose information about the traffic for measurement or diagnostic purposes. In any case, the information sent and received is to be treated as advisory only.</p>
+<p class="figure">Figure 6: PLUS extended header with variable-length PCF</p>
+<p id="rfc.section.3.p.3">Sender to Path signals are generally used to expose information about the traffic for measurement or diagnostic purposes. Path to Receiver signals generally take the form of accumulators: initialized to some value by the sender, and subject to some aggregation function by each on-path device that understands them. In any case, the information sent and received is to be treated as advisory only.</p>
+<p id="rfc.section.3.p.4">Note that since C codepoints 00 and 01 imply identical treatment for zero-length (L codepoint 00) PCF values, both (i.e., type bytes 0x00 - 0x0f and 0x40 - 0x4f) are used for sender-to-path packet marking.</p>
 <h1 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1.</a> <a href="#measurement-and-diagnostics-using-the-extended-header" id="measurement-and-diagnostics-using-the-extended-header">Measurement and Diagnostics using the Extended Header</a></h1>
 <p id="rfc.section.3.1.p.1">We have identified the following sender to path signals as potentially useful for measurement and diagnostic purposes. These signals are advisory only, and should not be presumed by either the endpoints or devices along the path to affect forwarding behavior.</p>
 <p/>
 
 <ul>
-  <li>Packet number echo delta time. Exposes the interval between the receipt of the packet whose number appears in the PSE and the transmission of this packet, as in section 4.1.2 of <a href="#IPIM">[IPIM]</a>. Together with analysis of the PSN and PSE sequence, this allows high-precision RTT estimation.</li>
-  <li>Timestamp and timestamp echo. Similar to TCP timestamps in <a href="#RFC7323">[RFC7323]</a>, allows constant-rate clock exposure to devices on path. Note that this is less necessary for RTT measurement of one-sided flows than it is in TCP, due to the properties of the PSN and PSE values in the Basic Header.</li>
+  <li>Packet number echo delta time (Type 0x21, 3-byte sender to path) Exposes the interval between the receipt of the packet whose number appears in the PSE and the transmission of this packet, as in section 4.1.2 of <a href="#IPIM">[IPIM]</a>. Together with analysis of the PSN and PSE sequence, this allows high-precision RTT estimation.  The encoding of this field is TBD.</li>
+  <li>Timestamp (Type 0x22, 3-byte sender to path). Similar to TCP timestamps in <a href="#RFC7323">[RFC7323]</a>, allows constant-rate clock exposure to devices on path. Note that this is less necessary for RTT measurement of one-sided flows than it is in TCP, due to the properties of the PSN and PSE values in the Basic Header. [EDITOR&#8217;S NOTE: is this useful enough to keep?]</li>
+  <li>Timestamp Echo (Type 0x23, 3-byte sender to path). Echo of the last received timestamp, as above. [EDITOR&#8217;S NOTE: is this useful enough to keep?]</li>
 </ul>
 <p id="rfc.section.3.1.p.3">We have identified the following path to receiver signals as potentially useful. Note that accumulated values for use at the sender must be fed back to the sender by the overlying transport, and that the presence of non-PLUS aware devices on path at breaks in MTU mean that the accumulated value can only be used as a hint to processes for measurement and discovery of the accumulated values at the sender.</p>
 <p/>
 
 <ul>
-  <li>MTU accumulator. This signal allows measurement of MTU information from PLUS-aware devices. The sender sets the initial value to the sender&#8217;s MTU. A PLUS-aware forwarding device on path receiving this value fills in the minimum of the received value and the MTU of the next hop into this field. The information, when fed back to the sender, can be used as a hint for a running PLPMTUD <a href="#RFC4821">[RFC4821]</a> process.</li>
-  <li>State timeout accumulator. This signal allows measurement of timeouts from PLUS-aware devices. It is initialized to a maximum (&#8220;no information&#8221;) value by the sender. A PLUS-aware forwarding device on path receiving this value fills in the minimum of the received value and the configured timeout for the flow&#8217;s present state into this field.</li>
-  <li>Rate limit accumulator. This signal allows exposure of rate limiting along the path. It is initialized to a maximum (&#8220;no information&#8221;) value by the sender. A PLUS-aware forwarding device on path receiving this value fills in the minimum of the received value and the rate limit to which this flow is subject into this field.</li>
-  <li>Trace accumulator. This signal allows exposure of a trace of PLUS-aware devices on path, similar to the Path Changes mechanism in section 4.3 of <a href="#IPIM">[IPIM]</a>. The sender initializes the value to a value chosen randomly for the flow; all packets in the flow using path trace accumulator must use the same initial value. A PLUS-aware forwarding device on path receiving this value fills in the result of XORing the received value with a randomly chosen device identifier, which it must use for all path trace accumulator signals it participates in. Packets traversing the same set of PLUS-aware forwarding devices in the same flow therefore arrive at the receiver with the same accumulated value, and changes to the set of devices on path can be detected by the receiver.</li>
+  <li>State timeout accumulator (Type 0x51, 1-byte path to receiver): This signal allows measurement of timeouts from PLUS-aware devices. It is initialized to a maximum (&#8220;no information&#8221;) value by the sender. A PLUS-aware forwarding device on path receiving this value fills in the minimum of the received value and the configured timeout for the flow&#8217;s present state into this field. The encoding of this field is TBD.</li>
+  <li>Rate limit accumulator (Type 0x52, 1-byte path to receiver): This signal allows exposure of rate limiting along the path. It is initialized to a maximum (&#8220;no information&#8221;) value by the sender. A PLUS-aware forwarding device on path receiving this value fills in the minimum of the received value and the rate limit to which this flow is subject into this field. The encoding of this field is TBD.</li>
+  <li>MTU accumulator (Type 0x61, 3-byte path to receiver): This signal allows measurement of MTU information from PLUS-aware devices. The sender sets the initial value to the sender&#8217;s MTU. A PLUS-aware forwarding device on path receiving this value fills in the minimum of the received value and the MTU of the next hop, in bytes into this field. The information, when fed back to the sender, can be used as a hint for a running PLPMTUD <a href="#RFC4821">[RFC4821]</a> process.</li>
+  <li>Trace accumulator (Type 0x71, varlen path to receiver). This signal allows exposure of a trace of PLUS-aware devices on path, similar to the Path Changes mechanism in section 4.3 of <a href="#IPIM">[IPIM]</a>. The sender initializes the value to a value chosen randomly for the flow; all packets in the flow using path trace accumulator must use the same initial value. A PLUS-aware forwarding device on path receiving this value fills in the result of XORing the received value with a randomly chosen device identifier, which it must use for all path trace accumulator signals it participates in. Packets traversing the same set of PLUS-aware forwarding devices in the same flow therefore arrive at the receiver with the same accumulated value, and changes to the set of devices on path can be detected by the receiver.</li>
 </ul>
 <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a></h1>
 <p id="rfc.section.4.p.1">This document has no actions for IANA. Path communication field types and PLUS magic numbers may be moved to a Standards Action registry in a future revision.</p>
@@ -566,7 +645,7 @@ address {
 <p id="rfc.section.5.p.2">PLUS itself contains some security-relevant features. In concert with an encrypted overlying transport, the PLUS Basic and Extended Headers are integrity-protected to prevent manipulation on-path of any value except Path to Receiver values; this integrity protection prevents Path to Receiver values from being injected without explicit sender involvement, or from being stripped from the PLUS Extended Header.</p>
 <p id="rfc.section.5.p.3">The CAT and PSE described in <a href="#basic-header">Section 2</a> taken together, provide entropy to prevent on-path devices from being driven into incorrect states by off-path attackers. Bidirectional stop signaling as in <a href="#twostop">Section 2.3.2</a> requires an on-path attacker of a given middlebox to forge traffic on both of the middlebox&#8217;s interfaces to drive a middlebox to inappropriately drop state for a flow.</p>
 <h1 id="rfc.section.6"><a href="#rfc.section.6">6.</a> <a href="#acknowledgments" id="acknowledgments">Acknowledgments</a></h1>
-<p id="rfc.section.6.p.1">This work is partially supported by the European Commission under Horizon 2020 grant agreement no. 688421 Measurement and Architecture for a Middleboxed Internet (MAMI), and by the Swiss State Secretariat for Education, Research, and Innovation under contract no. 15.0268. This support does not imply endorsement.</p>
+<p id="rfc.section.6.p.1">This work is partially supported by the European Commission under Horizon 2020 grant agreement no. 688421 Measurement and Architecture for a Middleboxed Internet (MAMI), and by the Swiss State Secretariat for Education, Research, and Innovation under contract no. 15.0268. This support does not imply endorsement.  Thanks to Ted Hardie, Joe Hildebrand, Mark Nottingham, and the participants of the PLUS BoF at IETF 96 in Berlin for input leading to this design; and to Gorry Fairhurst for the detailed review.</p>
 <h1 id="rfc.references"><a href="#rfc.references">7.</a> Informative References</h1>
 <table>
   <tbody>
