@@ -29,8 +29,11 @@ author:
     city: 8092 Zurich
     country: Switzerland
 
+normative:
+  RFC0768:
+  RFC2119:
+
 informative:
-  RFC0793:
   RFC2474:
   RFC4821:
   RFC3168:
@@ -72,11 +75,11 @@ mechanism described in {{I-D.trammell-plus-abstract-mech}}.
 # Introduction
 
 This document defines a wire image for a Path Layer UDP Substrate (PLUS), for
-limited exposure of information from encrypted, UDP-encapsulated transport
-protocols. The wire image implements signaling to drive the minimal state
-machine defined in {{I-D.trammell-plus-statefulness}} as well as optional
-exposure of additional information to devices along the path using the
-mechanism described in {{I-D.trammell-plus-abstract-mech}}.
+limited exposure of information from encrypted, UDP-encapsulated {{RFC0768}}
+transport protocols. The wire image implements signaling to drive the minimal
+state machine defined in {{I-D.trammell-plus-statefulness}} as well as optional
+exposure of additional information to devices along the path using the mechanism
+described in {{I-D.trammell-plus-abstract-mech}}.
 
 As discussed in {{I-D.hardie-path-signals}}, basic information about flows
 currently exposed by TCP are missing from transport protocols that encrypt
@@ -94,6 +97,13 @@ This wire image is intended primarily to support state maintenance and
 measurement; the principles of measurement and primitives we aim to support
 are drawn from recent work on explicit measurability in protocol design
 {{IPIM}}.
+
+
+## Notational Conventions
+
+The words "MUST", "MUST NOT", "SHOULD", and "MAY" are used in this document.
+It's not shouting; when these words are capitalized, they have a special meaning
+as defined in {{RFC2119}}.
 
 # State Maintenance and Measurement: Basic Header {#basic-header}
 
@@ -203,16 +213,17 @@ in the Basic Header as follows:
   reordered, the sender sets the R flag.
 
 - If the overlying transport determines that the connection is shutting down,
-and no further packets will be sent in this direction other than packets part
-of this shutdown, the sender sets the S flag; see
-{{twostop}} for details.
+and no further packets will be sent in this direction other than packets part of
+this shutdown, the sender sets the S flag; see {{twostop}} for details.
 
 ## Receiver Behavior
 
 When a receiver receives a packet containing a PLUS Basic Header, it processes
 the values in the Basic Header as follows:
 
-- It verifies that the magic number is the constant 0xd800fff. If the receiver is expecting a PLUS packet, and it does not see this value, it drops the packet without further processing.
+- It verifies that the magic number is the constant 0xd800fff. If the receiver
+  is expecting a PLUS packet, and it does not see this value, it drops the
+  packet without further processing.
 
 - It verifies the integrity of the information in the PLUS Basic Header, using
   information carried in the overlying transport. Packets failing integrity
@@ -353,22 +364,21 @@ control are provided by the PLUS Extended Header. The extended header shares the
 layout of its first 20 bytes with the PLUS Basic Header, except the Extended
 Header bit (0x01 on byte 11) is set. As with the Basic Header, overlying
 transports are presumed to provide encryption and integrity protection for the
-PLUS Extended Header. The Extended Header has a 1-byte type field, a 6-bit length field, 
-a 2-bit Integrity indicator, and
-variable-length value field for the Path Communication Function (PCF):
+PLUS Extended Header. The Extended Header has a 1-byte type field, a 6-bit
+length field, a 2-bit Integrity indicator, and variable-length value field for
+the Path Communication Function (PCF):
 
-- PCF Type: a 1-byte value defining the type and semantics of the PCF value. Types 0x00 and 0x11 are special and further explained below.
-
-- PCF Length: a 6-bit field indicating the length of the variable length value field.
+- PCF Type: a 1-byte value defining the type and semantics of the PCF value. Types 0x00 and 0xff are special and further explained below.
 
 - PDF Integrity indication field: a 2-bit field indicating how much of the PCF value field is integrity protected:
   - 00: the PCF field is not integrity protected.
-  - 01: the first quarter of the PCF value field is integrity protected.
-  - 10: the first half of the PCF value field is integrity protected.
+  - 01: the first quarter of the PCF value field is integrity protected, rounded up to the nearest bit.
+  - 10: the first half of the PCF value field is integrity protected, rounded up to the nearest bit.
   - 11: the whole PCF field is integrity protected.
 
-- PCF Value: variable-length field containing a value of the type described in the PCF Type field.
+- PCF Length: a 6-bit field indicating the length of the variable length value field.
 
+- PCF Value: variable-length field containing a value of the type described in the PCF Type field.
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -388,8 +398,10 @@ variable-length value field for the Path Communication Function (PCF):
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
 +---------------+-----------+---+------------------------------+
-|     Type      |   length  | I |                              /
-+---------------+-----------+---+                              \
+|   PCF Type    |  PCF Len  | I |                              \
++---------------+-----------+---+    PCF value (variable)      /
+/                                                              \
++- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
 \                                                              /
 /         transport protocol header/payload (encrypted)        \
 \                                                              /
@@ -407,46 +419,51 @@ Knowing the type, also means that the semantics of the value field are fully kno
 Therefore a middlebox does not need to check the length and integrity field. These 
 field are provided for receiver-side handling on unknown PCF types.
 
-If a sender requests information from a path, these are generally used to expose information about the
-traffic for measurement or diagnostic purposes. These signals
-generally take the form of accumulators: initialized to some value by the
-sender, and subject to some aggregation function by each on-path device that
+If a sender requests information from a path, these are generally used to expose
+information about the traffic for measurement or diagnostic purposes. These
+signals generally take the form of accumulators: initialized to some value by
+the sender, and subject to some aggregation function by each on-path device that
 understands them. In any case, the information sent and received is to be
 treated as advisory only, given its integrity cannot be checked.
 
-A PLUS receiver that receives a PLUS packet with an extended header and an unknown
-PCF type where the integrity indication is smaller than 11, MUST feed the 
-non-integrity-protected part of the PCF value field back to the sender, using an encrypted feedback channel
-provided by the upper layer protocol. The sender usually consumes this data as it has 
-requested it previously from the path. However, the sender SHOULD check if the information
-received is reasonable and otherwise consider to not use this extension header again on 
-this path. Such a check should include the following considerations: 1) If the information 
-was intended to be consumed by the receiver, the receiver indicates by reflecting this 
-information that the PFC is unknown. 2) If the value field is empty/zero, this indicates 
-that there is no path element on the current path that supports the requested PCF. However,
-as the path can change, a PLUS sender might re-try to requested the information at a later 
-point of time or if any indication is received that the path might have cahnged. 
-3) If the PCF value field has an invalid or unreasonable value regarding the
-requested PCF type, this may be an indication that the scratch space is misused, and the sender
-SHOULD NOT use this extended header PCF on this path anymore.
+A PLUS receiver that receives a PLUS packet with an extended header and an
+unknown PCF type where the integrity indication is smaller than 11, MUST feed
+the non-integrity-protected part of the PCF value field back to the sender,
+using an encrypted feedback channel provided by the upper layer protocol. The
+sender usually consumes this data as it has requested it previously from the
+path. The sender SHOULD check the reasonability of the received information, as follows:
 
-The PCF types 0x00 and 0x11 are used for special purposes. 0x00 indicates that another 
-1-byte type field is followed (before the length and integrity indication) to provide 
-future extensibility. The type 0x11 indicates that that PLUS payload data follows 
-(without a PDF length and integrity indication). The semantics of this PLUS payload are
-not specified in this document but e.g. can be used to carry ICMP messages over PLUS.
 
-If the length field is zero, the integrity indication field is not specified and reserved for
-future use. It MUST be set to zero and ignored at reception.
+- If the information was intended to be consumed by the receiver instead of the
+sender, reflecting  the receiver indicates by reflecting this information that the PFC is
+unknown.
+- If the value field is unchanged from its initial value, this may indicate that
+there is no path element on the current path that supports the requested PCF.
+However, as the path can change, a PLUS sender might re-try to requested the
+information at a later point of time or if any indication is received that the
+path might have changed.
+- If the PCF value field has an invalid or unreasonable value regarding the
+requested PCF type, this may be an indication that the scratch space is misused,
+and the sender SHOULD NOT use this extended header PCF on this path anymore.
+
+The PCF types 0x00 and 0xff are used for special purposes. 0x00 indicates that
+another 1-byte type field is followed (before the length and integrity
+indication) to provide future extensibility. The type 0xff indicates that that
+PLUS payload data follows (without a PDF length and integrity indication). The
+semantics of this PLUS payload are not specified in this revision of this
+document but e.g. can be used to carry ICMP messages over PLUS.
+
+If the length field is zero, the integrity indication field is not specified and
+reserved for future use. It MUST be set to zero and ignored by the receiver.
 
 ## Measurement and Diagnostics using the Extended Header
 
-We have identified the following signals that can be exposed by the sender as potentially useful
-for measurement and diagnostic purposes. These signals are advisory only, and
-should not be presumed by either the endpoints or devices along the path to
-affect forwarding behavior.
+We have identified the following signals that can be exposed by the sender as
+potentially useful for measurement and diagnostic purposes. These signals are
+advisory only, and should not be presumed by either the endpoints or devices
+along the path to affect forwarding behavior. Details of type and encoding for these information 
 
-- Packet number echo delta time (Type 0x21, 3-byte sender to path) Exposes the
+- Packet number echo delta time. Exposes the
 interval between the receipt of the packet whose number appears in the PSE and
 the transmission of this packet, as in section 4.1.2 of {{IPIM}}. Together with
 analysis of the PSN and PSE sequence, this allows high-precision RTT estimation.
@@ -458,14 +475,15 @@ this is less necessary for RTT measurement of one-sided flows than it is in TCP,
 due to the properties of the PSN and PSE values in the Basic Header. [EDITOR'S
 NOTE: is this useful enough to keep?]
 
-- Timestamp Echo (Type 0x23, 3-byte sender to path). Echo of the last received
-  timestamp, as above. [EDITOR'S NOTE: is this useful enough to keep?]
+- Timestamp Echo. Echo of the last received
+  timestamp, as above. [EDITOR'S NOTE: as above, is this useful enough to keep?]
 
-- Congestion Exposure. The sender exposed the number of observed losses and 
-ECN marks {{RFC3168}}. The path observe the information over time and derive 
-information about the current whole-path congestion, as currently provided by 
-counting retransmission on TCP, the RTCP Extended Report (XR) block for periodic ECN
-feedback {{RFC6679}}, or ConEx for IPv6 {{RFC7837}}. 
+- Congestion Exposure. The sender exposes the number of observed losses and ECN
+marks {{RFC3168}}. The path observes the information over time and derive
+information about the current whole-path congestion, as currently provided by
+counting retransmission on TCP, the RTCP Extended Report (XR) block for periodic
+ECN feedback {{RFC6679}}, or ConEx for IPv6 {{RFC7837}}. The encoding of this
+field is TBD.
 
 We have identified the following signals for request from the path as potentially
 useful. Note that accumulated values for use at the sender must be fed back to
@@ -474,28 +492,28 @@ devices on path at breaks in MTU mean that the accumulated value can only be
 used as a hint to processes for measurement and discovery of the accumulated
 values at the sender.
 
-- State timeout accumulator (Type 0x51, 1-byte path to receiver): This signal
+- State timeout accumulator: This signal
   allows measurement of timeouts from PLUS-aware devices. It is initialized to a
   maximum ("no information") value by the sender. A PLUS-aware forwarding device
   on path receiving this value fills in the minimum of the received value and
   the configured timeout for the flow's present state into this field. The
   encoding of this field is TBD.
 
-- Rate limit accumulator (Type 0x52, 1-byte path to receiver): This signal
+- Rate limit accumulator: This signal
   allows exposure of rate limiting along the path. It is initialized to a
   maximum ("no information") value by the sender. A PLUS-aware forwarding device
   on path receiving this value fills in the minimum of the received value and
   the rate limit to which this flow is subject into this field. The encoding of
   this field is TBD.
 
-- MTU accumulator (Type 0x61, 3-byte path to receiver): This signal allows
+- MTU accumulator: This signal allows
   measurement of MTU information from PLUS-aware devices. The sender sets the
   initial value to the sender's MTU. A PLUS-aware forwarding device on path
   receiving this value fills in the minimum of the received value and the MTU of
   the next hop, in bytes into this field. The information, when fed back to the sender,
   can be used as a hint for a running PLPMTUD {{RFC4821}} process.
 
-- Trace accumulator (Type 0x71, varlen path to receiver). This signal allows
+- Trace accumulator. This signal allows
   exposure of a trace of PLUS-aware devices on path, similar to the Path Changes
   mechanism in section 4.3 of {{IPIM}}. The sender initializes the value to a
   value chosen randomly for the flow; all packets in the flow using path trace
@@ -506,6 +524,18 @@ values at the sender.
   PLUS-aware forwarding devices in the same flow therefore arrive at the
   receiver with the same accumulated value, and changes to the set of devices on
   path can be detected by the receiver.
+
+# Implementation and Deployment Considerations
+
+Here we discuss considerations for the implementation of overlying transports on PLUS, and their deployment in the Internet
+
+## Interface to Overlying Transport 
+
+[EDITOR'S NOTE: Since the overlying transport is responsible for providing the cryptographic context used for integrity protection and feedback, and may be responsible for feedback as well, the "northbound" interface needs to be concretely specified in a future revision of this document.]
+
+## Discovery
+
+[EDITOR'S NOTE: Discovery is currently explicitly out of band. Should there be a way for a PLUS-aware overlying transport to discover whether its peer wants to use a PLUS- or non-PLUS variant of the transport? This is a specific case of the generalized multi-transport discovery and negotiation problem, so whatever happens here should be interoperable with deployed/deployable approaches.]
 
 # IANA Considerations
 
