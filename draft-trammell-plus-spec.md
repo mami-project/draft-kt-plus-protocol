@@ -33,6 +33,9 @@ informative:
   RFC0793:
   RFC2474:
   RFC4821:
+  RFC3168:
+  RFC6679:
+  RFC7837:
   RFC7675:
   RFC7323:
   RFC8035:
@@ -350,41 +353,22 @@ control are provided by the PLUS Extended Header. The extended header shares the
 layout of its first 20 bytes with the PLUS Basic Header, except the Extended
 Header bit (0x01 on byte 11) is set. As with the Basic Header, overlying
 transports are presumed to provide encryption and integrity protection for the
-PLUS Extended Header. The Extended Header has 1-byte, 2-byte, 4-byte, and
-variable-length variants, and three to four additional fields:
+PLUS Extended Header. The Extended Header has a 1-byte type field, a 6-bit length field, 
+a 2-bit Integrity indicator, and
+variable-length value field for the Path Communication Function (PCF):
 
-- C codepoint (PCF class): a two-bit value defining the class of the PCF value,
-  and therefore its treatment at middleboxes and endpoints. It has the following values:
-    - 00: sender to path signal: the class, length, type, and content of the PCF
-      value are integrity protected end-to-end.
-    - 01: path to receiver signal: the class, length, and type of the PCF value
-      are integrity protected end to end, but not the content of the value; for
-      integrity protection purposes, it is assumed to be all zeroes.
-    - 10: reserved for a future revision of this specification.
-    - 11: reserved for a future revision of this specification.
+- PCF Type: a 1-byte value defining the type and semantics of the PCF value. Types 0x00 and 0x11 are special and further explained below.
 
-- L codepoint (PCF length): a two-bit value encoding the length of the PCF
-  value. It has the following values:
-    - 00: 0 bytes. See {{fig-header-pcf0}} for the header layout. Zero-length
-      PCFs are used to carry marking information on a packet or flow in the PCF
-      Type field only.
-    - 01: 1 byte. See {{fig-header-pcf1}} for the header layout.
-    - 10: 3 bytes. See {{fig-header-pcf3}} for the header layout.
-    - 11: Variable length; byte 21 contains the length of the PCF value, 0-255.
-      See {{fig-header-pcfv}}.
+- PCF Length: a 6-bit field indicating the length of the variable length value field.
 
-- PCF Type: a 4-bit value defining the type and semantics of the PCF value,
-  scoped to the L and C codepoints (i.e., PCF Type 1 with C=00 and L=00 has a
-  distinct meaning from PCF Type 1 with C=00 and L=01). The C, L, and Type
-  fields are expressed as a single byte in the subsections below. For example,
-  0x01 is C=00, L=00, type 1, a zero-length sender-to-path mark; and 0x61 is
-  C=01, L=10, type 1, a 3-byte path-to-receiver signal.
+- PDF Integrity indication field: a 2-bit field indicating how much of the PCF value field is integrity protected:
+  - 00: the PCF field is not integrity protected.
+  - 01: the first quarter of the PCF value field is integrity protected.
+  - 10: the first half of the PCF value field is integrity protected.
+  - 11: the whole PCF field is integrity protected.
 
-- PCF Length (only for L=11): a one bit field indicating the length of the variable length value field.
+- PCF Value: variable-length field containing a value of the type described in the PCF Type field.
 
-- PCF Value (not for L=00): a 1-byte, 3-byte, or variable-length field, according to the value
-  of the L codepoint, containing a value of the type described in the PCF Type
-  field.
 
 ~~~~~~~~~~~~~
   3                   2                   1
@@ -403,109 +387,61 @@ variable-length variants, and three to four additional fields:
 |                 packet serial number  PSN                    |
 +--------------------------------------------------------------+
 |                 packet serial echo    PSE                    |
-+---+---+-------+---------------+------------------------------+
-| C | 0 | Type  |                                              /
-+---+---+-------+                                              \
-\                                                              /
-/         transport protocol header/payload (encrypted)        \
-\                                                              /
-~~~~~~~~~~~~~
-{: #fig-header-pcf0 title="PLUS extended header with 0-byte PCF"}
-
-~~~~~~~~~~~~~
-  3                   2                   1
-1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-+------------------------------+-------------------------------+
-|       UDP source port        |      UDP destination port     |
-+------------------------------+-------------------------------+
-|       UDP length             |      UDP checksum             |
-+------------------------------+-----------------------+-+-+-+-+
-|                            magic                     |L|R|S|1|
-+------------------------------------------------------+-+-+-+-+
-|                                                              |
-+-             connection/association token CAT               -+
-|                                                              |
-+--------------------------------------------------------------+
-|                 packet serial number  PSN                    |
-+--------------------------------------------------------------+
-|                 packet serial echo    PSE                    |
-+---+---+-------+---------------+------------------------------+
-| C | 1 | Type  |   PCF value   |                              /
-+---+---+-------+---------------+                              \
++---------------+-----------+---+------------------------------+
+|     Type      |   length  | I |                              /
++---------------+-----------+---+                              \
 \                                                              /
 /         transport protocol header/payload (encrypted)        \
 \                                                              /
 ~~~~~~~~~~~~~
 {: #fig-header-pcf1 title="PLUS extended header with 1-byte PCF"}
 
-~~~~~~~~~~~~~
-  3                   2                   1
-1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-+------------------------------+-------------------------------+
-|       UDP source port        |      UDP destination port     |
-+------------------------------+-------------------------------+
-|       UDP length             |      UDP checksum             |
-+------------------------------+-----------------------+-+-+-+-+
-|                            magic                     |L|R|S|1|
-+------------------------------------------------------+-+-+-+-+
-|                                                              |
-+-             connection/association token CAT               -+
-|                                                              |
-+--------------------------------------------------------------+
-|                 packet serial number  PSN                    |
-+--------------------------------------------------------------+
-|                 packet serial echo    PSE                    |
-+---+---+-------+----------------------------------------------+
-| C | 2 | Type  |                  PCF value                   |
-+---+---+-------+----------------------------------------------+
-\                                                              /
-/         transport protocol header/payload (encrypted)        \
-\                                                              /
-~~~~~~~~~~~~~
-{: #fig-header-pcf3 title="PLUS extended header with 3-byte PCF"}
+The extended header is generally used to expose or request information from/to the path.
+If the value field is integrity protected it MUST NOT be changed by an element 
+on the network path and provides only consumable information. Non-integrity protected parts
+of the value field carry a scratch space for path elements to provide the requested
+information defined by the PCF type. The type of the PCF determines the semantics of the value
+field and limits the intended use of the scratch space. A middlebox only needs to
+check for PCF types that are relevant for the function that middlebox provides. 
+Knowing the type, also means that the semantics of the value field are fully known.
+Therefore a middlebox does not need to check the length and integrity field. These 
+field are provided for receiver-side handling on unknown PCF types.
 
-~~~~~~~~~~~~~
-  3                   2                   1
-1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-+------------------------------+-------------------------------+
-|       UDP source port        |      UDP destination port     |
-+------------------------------+-------------------------------+
-|       UDP length             |      UDP checksum             |
-+------------------------------+-----------------------+-+-+-+-+
-|                            magic                     |L|R|S|1|
-+------------------------------------------------------+-+-+-+-+
-|                                                              |
-+-             connection/association token CAT               -+
-|                                                              |
-+--------------------------------------------------------------+
-|                 packet serial number  PSN                    |
-+--------------------------------------------------------------+
-|                 packet serial echo    PSE                    |
-+---+---+-------+---------------+------------------------------+
-| C | 3 | Type  |   PCF length  |                              /
-+---+---+-------+---------------+      PCF value (varlen)      \
-\                                                              /
-+--------------------------------------------------------------+
-\                                                              /
-/         transport protocol header/payload (encrypted)        \
-\                                                              /
-~~~~~~~~~~~~~
-{: #fig-header-pcfv title="PLUS extended header with variable-length PCF"}
-
-Sender to Path signals are generally used to expose information about the
-traffic for measurement or diagnostic purposes. Path to Receiver signals
+If a sender requests information from a path, these are generally used to expose information about the
+traffic for measurement or diagnostic purposes. These signals
 generally take the form of accumulators: initialized to some value by the
 sender, and subject to some aggregation function by each on-path device that
 understands them. In any case, the information sent and received is to be
-treated as advisory only.
+treated as advisory only, given its integrity cannot be checked.
 
-Note that since C codepoints 00 and 01 imply identical treatment for zero-length
-(L codepoint 00) PCF values, both (i.e., type bytes 0x00 - 0x0f and 0x40 - 0x4f)
-are used for sender-to-path packet marking.
+A PLUS receiver that receives a PLUS packet with an extended header and an unknown
+PCF type where the integrity indication is smaller than 11, MUST feed the 
+non-integrity-protected part of the PCF value field back to the sender, using an encrypted feedback channel
+provided by the upper layer protocol. The sender usually consumes this data as it has 
+requested it previously from the path. However, the sender SHOULD check if the information
+received is reasonable and otherwise consider to not use this extension header again on 
+this path. Such a check should include the following considerations: 1) If the information 
+was intended to be consumed by the receiver, the receiver indicates by reflecting this 
+information that the PFC is unknown. 2) If the value field is empty/zero, this indicates 
+that there is no path element on the current path that supports the requested PCF. However,
+as the path can change, a PLUS sender might re-try to requested the information at a later 
+point of time or if any indication is received that the path might have cahnged. 
+3) If the PCF value field has an invalid or unreasonable value regarding the
+requested PCF type, this may be an indication that the scratch space is misused, and the sender
+SHOULD NOT use this extended header PCF on this path anymore.
+
+The PCF types 0x00 and 0x11 are used for special purposes. 0x00 indicates that another 
+1-byte type field is followed (before the length and integrity indication) to provide 
+future extensibility. The type 0x11 indicates that that PLUS payload data follows 
+(without a PDF length and integrity indication). The semantics of this PLUS payload are
+not specified in this document but e.g. can be used to carry ICMP messages over PLUS.
+
+If the length field is zero, the integrity indication field is not specified and reserved for
+future use. It MUST be set to zero and ignored at reception.
 
 ## Measurement and Diagnostics using the Extended Header
 
-We have identified the following sender to path signals as potentially useful
+We have identified the following signals that can be exposed by the sender as potentially useful
 for measurement and diagnostic purposes. These signals are advisory only, and
 should not be presumed by either the endpoints or devices along the path to
 affect forwarding behavior.
@@ -525,7 +461,13 @@ NOTE: is this useful enough to keep?]
 - Timestamp Echo (Type 0x23, 3-byte sender to path). Echo of the last received
   timestamp, as above. [EDITOR'S NOTE: is this useful enough to keep?]
 
-We have identified the following path to receiver signals as potentially
+- Congestion Exposure. The sender exposed the number of observed losses and 
+ECN marks {{RFC3168}}. The path observe the information over time and derive 
+information about the current whole-path congestion, as currently provided by 
+counting retransmission on TCP, the RTCP Extended Report (XR) block for periodic ECN
+feedback {{RFC6679}}, or ConEx for IPv6 {{RFC7837}}. 
+
+We have identified the following signals for request from the path as potentially
 useful. Note that accumulated values for use at the sender must be fed back to
 the sender by the overlying transport, and that the presence of non-PLUS aware
 devices on path at breaks in MTU mean that the accumulated value can only be
@@ -583,8 +525,8 @@ information is exposed.
 PLUS itself contains some security-relevant features. In concert with an
 encrypted overlying transport, the PLUS Basic and Extended Headers are
 integrity-protected to prevent manipulation on-path of any value except Path to
-Receiver values; this integrity protection prevents Path to Receiver values
-from being injected without explicit sender involvement, or from being stripped
+Receiver values; this integrity protection prevents path elements from injecting 
+values without explicit sender involvement, or from being stripped
 from the PLUS Extended Header.
 
 The CAT and PSE described in {{basic-header}} taken together, provide entropy
