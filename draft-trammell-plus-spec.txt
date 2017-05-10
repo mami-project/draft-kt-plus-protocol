@@ -5,7 +5,7 @@
 Network Working Group                                        B. Trammell
 Internet-Draft                                             M. Kuehlewind
 Intended status: Experimental                                 ETH Zurich
-Expires: September 9, 2017                                March 08, 2017
+Expires: September 14, 2017                               March 13, 2017
 
 
                  Path Layer UDP Substrate Specification
@@ -36,7 +36,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on September 9, 2017.
+   This Internet-Draft will expire on September 14, 2017.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 1]
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 1]
 
 Internet-Draft                  PLUS Spec                     March 2017
 
@@ -64,28 +64,34 @@ Internet-Draft                  PLUS Spec                     March 2017
 Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Notational Conventions  . . . . . . . . . . . . . . . . .   3
    2.  State Maintenance and Measurement: Basic Header . . . . . . .   3
-     2.1.  Sender Behavior . . . . . . . . . . . . . . . . . . . . .   4
+     2.1.  Sender Behavior . . . . . . . . . . . . . . . . . . . . .   5
      2.2.  Receiver Behavior . . . . . . . . . . . . . . . . . . . .   5
      2.3.  On-Path State Maintenance using the Basic Header  . . . .   6
-       2.3.1.  State Establishment . . . . . . . . . . . . . . . . .   6
-       2.3.2.  Bidirectional Stop Signaling  . . . . . . . . . . . .   7
+       2.3.1.  State Establishment . . . . . . . . . . . . . . . . .   7
+       2.3.2.  Bidirectional Stop Signaling  . . . . . . . . . . . .   8
        2.3.3.  State Rebinding . . . . . . . . . . . . . . . . . . .   8
-     2.4.  Measurement and Diagnosis using the Basic Header  . . . .   8
-   3.  Path Communication: Extended Header . . . . . . . . . . . . .   8
-     3.1.  Measurement and Diagnostics using the Extended Header . .  13
-   4.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  15
-   5.  Security Considerations . . . . . . . . . . . . . . . . . . .  15
-   6.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  16
-   7.  Informative References  . . . . . . . . . . . . . . . . . . .  16
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  17
+     2.4.  Measurement and Diagnosis using the Basic Header  . . . .   9
+   3.  Path Communication: Extended Header . . . . . . . . . . . . .   9
+     3.1.  Measurement and Diagnostics using the Extended Header . .  12
+   4.  Implementation and Deployment Considerations  . . . . . . . .  13
+     4.1.  Interface to Overlying Transport  . . . . . . . . . . . .  13
+     4.2.  Discovery . . . . . . . . . . . . . . . . . . . . . . . .  14
+   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  14
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  14
+   7.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  14
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  15
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . .  15
+     8.2.  Informative References  . . . . . . . . . . . . . . . . .  15
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  16
 
 1.  Introduction
 
    This document defines a wire image for a Path Layer UDP Substrate
    (PLUS), for limited exposure of information from encrypted, UDP-
-   encapsulated transport protocols.  The wire image implements
-   signaling to drive the minimal state machine defined in
+   encapsulated [RFC0768] transport protocols.  The wire image
+   implements signaling to drive the minimal state machine defined in
    [I-D.trammell-plus-statefulness] as well as optional exposure of
    additional information to devices along the path using the mechanism
    described in [I-D.trammell-plus-abstract-mech].
@@ -100,22 +106,27 @@ Table of Contents
    performance measurement, diagnostics, and troubleshooting via header
    encryption makes network management more difficult.  The PLUS wire
    image defined by this document aims to mitigate this difficulty,
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 2]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    allowing deployment of encrypted protocols without loss of essential
    in- network functionality.
 
    This wire image is intended primarily to support state maintenance
    and measurement; the principles of measurement and primitives we aim
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 2]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
    to support are drawn from recent work on explicit measurability in
    protocol design [IPIM].
+
+1.1.  Notational Conventions
+
+   The words "MUST", "MUST NOT", "SHOULD", and "MAY" are used in this
+   document.  It's not shouting; when these words are capitalized, they
+   have a special meaning as defined in [RFC2119].
 
 2.  State Maintenance and Measurement: Basic Header
 
@@ -152,6 +163,13 @@ Internet-Draft                  PLUS Spec                     March 2017
 
                  Figure 1: PLUS header with basic exposure
 
+
+
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 3]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    Fields are encoded in network byte order and are defined as follows:
 
    o  magic: A 28-bit number identifying this packet as carrying a PLUS
@@ -161,14 +179,6 @@ Internet-Draft                  PLUS Spec                     March 2017
       selected for the PLUS magic number based of experience with the
       SPUD prototype, a cursory survey of common UDP protocols, and
       compatibility with [RFC8035].
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 3]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
 
    o  flags: four bits carrying additional information:
 
@@ -208,6 +218,14 @@ Internet-Draft                  PLUS Spec                     March 2017
 
    Since PLUS is designed to be used for UDP-encapsulated, encrypted
    transport protocols, overlying transports are presumed to provide
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 4]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    encryption and integrity protection for their own headers.  For the
    sake of efficiency, it is also assumed that this integrity protection
    can be extended to the bits in the PLUS Basic Header.
@@ -218,13 +236,6 @@ Internet-Draft                  PLUS Spec                     March 2017
    the values in the Basic Header as follows:
 
    o  The magic number is set to the constant 0xd8007ff.
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 4]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
 
    o  If the sender is the flow initiator, and the packet is the first
       packet in the flow, the sender selects a cryptographically random
@@ -263,6 +274,14 @@ Internet-Draft                  PLUS Spec                     March 2017
       the receiver is expecting a PLUS packet, and it does not see this
       value, it drops the packet without further processing.
 
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 5]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    o  It verifies the integrity of the information in the PLUS Basic
       Header, using information carried in the overlying transport.
       Packets failing integrity checks SHOULD be dropped, but MAY be
@@ -273,20 +292,51 @@ Internet-Draft                  PLUS Spec                     March 2017
    o  It stores the PSN to be sent as the PSE on the the next packet it
       sends in the opposite direction.
 
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 5]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
 2.3.  On-Path State Maintenance using the Basic Header
 
    The basic header provides all the signals necessary to drive the
    transport- independent state machine described in
    [I-D.trammell-plus-statefulness], as shown in Figure 2.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 6]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
 
        `- - - - - - - - - - - - - - - - - - - - - - - - - - - -'
        `    +============+    a->b    +============+           '
@@ -330,19 +380,19 @@ Internet-Draft                  PLUS Spec                     March 2017
    On the first packet with a PLUS header forwarded by an on-path device
    for a given 5-tuple plus CAT, the device moves that flow from the
    zero state to the uniflow state.  The device retuens the flow to zero
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 6]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
    state after not seeing a packet on the same flow in the same
    direction with the same CAT within a timeout interval TO_IDLE.
    Otherwise, it stays in uniflow state and continues forwarding
    packets, as long as it only observes packets in the same direction as
    the initial packet. (the a->b direction in Figure 2).
+
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 7]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
 
    A PLUS-aware on-path device forwarding a packet with a PLUS header
    with a reversed 5-tuple and identical CAT (the b->a direction in
@@ -384,16 +434,6 @@ Internet-Draft                  PLUS Spec                     March 2017
    state machine into associated state even in the middle of a flow,
    enabling fast recovery even in the case of such a coordinated attack.
 
-
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 7]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
 2.3.3.  State Rebinding
 
    One end of a PLUS association may change its address while
@@ -401,6 +441,15 @@ Internet-Draft                  PLUS Spec                     March 2017
    on-path device that forwards a packet for a flow in the zero state,
    where one of the endpoint identifiers (address and port) and the CAT,
    but not the other endpoint identifier, match a flow in a non-zero
+
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 8]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    state, treats that packet as belonging to the existing flow, and
    updates the endpoint identifier.
 
@@ -437,75 +486,40 @@ Internet-Draft                  PLUS Spec                     March 2017
    Basic Header, except the Extended Header bit (0x01 on byte 11) is
    set.  As with the Basic Header, overlying transports are presumed to
    provide encryption and integrity protection for the PLUS Extended
-   Header.  The Extended Header has in 21-byte, 22-byte, 24-byte, and
-   variable-length variants, and three to four additional fields:
+   Header.  The Extended Header has a 1-byte type field, a 6-bit length
+   field, a 2-bit Integrity indicator, and variable-length value field
+   for the Path Communication Function (PCF):
+
+   o  PCF Type: a 1-byte value defining the type and semantics of the
+      PCF value.  Types 0x00 and 0xff are special and further explained
+      below.
+
+   o  PDF Integrity indication field: a 2-bit field indicating how much
+      of the PCF value field is integrity protected:
+
+      *  00: the PCF field is not integrity protected.
 
 
 
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 8]
+Trammell & Kuehlewind  Expires September 14, 2017               [Page 9]
 
 Internet-Draft                  PLUS Spec                     March 2017
 
 
-   o  C codepoint (PCF class): a two-bit value defining the class of the
-      PCF value, and therefore its treatment at middleboxes and
-      endpoints.  It has the following values:
+      *  01: the first quarter of the PCF value field is integrity
+         protected, rounded up to the nearest bit.
 
-      *  00: sender to path signal: the class, length, type, and content
-         of the PCF value are integrity protected end-to-end.
+      *  10: the first half of the PCF value field is integrity
+         protected, rounded up to the nearest bit.
 
-      *  01: path to receiver signal: the class, length, and type of the
-         PCF value are integrity protected end to end, but not the
-         content of the value; for integrity protection purposes, it is
-         assumed to be all zeroes.
+      *  11: the whole PCF field is integrity protected.
 
-      *  10: reserved for a future revision of this specification.
+   o  PCF Length: a 6-bit field indicating the length of the variable
+      length value field.
 
-      *  11: reserved for a future revision of this specification.
-
-   o  L codepoint (PCF length): a two-bit value encoding the length of
-      the PCF value.  It has the following values:
-
-      *  00: 0 bytes.  See Figure 3 for the header layout.  Zero-length
-         PCFs are used to carry marking information on a packet or flow
-         in the PCF Type field only.
-
-      *  01: 1 byte.  See Figure 4 for the header layout.
-
-      *  10: 3 bytes.  See Figure 5 for the header layout.
-
-      *  11: Variable length; byte 21 contains the length of the PCF
-         value, 0-255.  See Figure 6.
-
-   o  PCF Type: a 4-bit value defining the type and semantics of the PCF
-      value, scoped to the L and C codepoints (i.e., PCF Type 1 with
-      C=00 and L=00 has a distinct meaning from PCF Type 1 with C=00 and
-      L=01).  The C, L, and Type fields are expressed as a single byte
-      in the subsections below.  For example, 0x01 is C=00, L=00, type
-      1, a zero-length sender-to-path mark; and 0x61 is C=01, L=10, type
-      1, a 3-byte path-to-receiver signal.
-
-   o  PCF Value: a 1-byte, 3-byte, or variable-length field, according
-      to the value of the L codepoint, containing a value of the type
+   o  PCF Value: variable-length field containing a value of the type
       described in the PCF Type field.
 
-
-
-
-
-
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017               [Page 9]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
      3                   2                   1
    1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
    +------------------------------+-------------------------------+
@@ -522,217 +536,105 @@ Internet-Draft                  PLUS Spec                     March 2017
    |                 packet serial number  PSN                    |
    +--------------------------------------------------------------+
    |                 packet serial echo    PSE                    |
-   +---+---+-------+---------------+------------------------------+
-   | C | 0 | Type  |                                              /
-   +---+---+-------+                                              \
+   +---------------+-----------+---+------------------------------+
+   |   PCF Type    |  PCF Len  | I |                              \
+   +---------------+-----------+---+    PCF value (variable)      /
+   /                                                              \
+   +- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
    \                                                              /
    /         transport protocol header/payload (encrypted)        \
    \                                                              /
 
-              Figure 3: PLUS extended header with 0-byte PCF
+              Figure 3: PLUS extended header with 1-byte PCF
+
+   The extended header is generally used to expose or request
+   information from/to the path.  If the value field is integrity
+   protected it MUST NOT be changed by an element on the network path
+   and provides only consumable information.  Non-integrity protected
+   parts of the value field carry a scratch space for path elements to
+   provide the requested information defined by the PCF type.  The type
+   of the PCF determines the semantics of the value field and limits the
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 10]
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 10]
 
 Internet-Draft                  PLUS Spec                     March 2017
 
 
-     3                   2                   1
-   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-   +------------------------------+-------------------------------+
-   |       UDP source port        |      UDP destination port     |
-   +------------------------------+-------------------------------+
-   |       UDP length             |      UDP checksum             |
-   +------------------------------+-----------------------+-+-+-+-+
-   |                            magic                     |L|R|S|1|
-   +------------------------------------------------------+-+-+-+-+
-   |                                                              |
-   +-             connection/association token CAT               -+
-   |                                                              |
-   +--------------------------------------------------------------+
-   |                 packet serial number  PSN                    |
-   +--------------------------------------------------------------+
-   |                 packet serial echo    PSE                    |
-   +---+---+-------+---------------+------------------------------+
-   | C | 1 | Type  |   PCF value   |                              /
-   +---+---+-------+---------------+                              \
-   \                                                              /
-   /         transport protocol header/payload (encrypted)        \
-   \                                                              /
+   intended use of the scratch space.  A middlebox only needs to check
+   for PCF types that are relevant for the function that middlebox
+   provides.  Knowing the type, also means that the semantics of the
+   value field are fully known.  Therefore a middlebox does not need to
+   check the length and integrity field.  These field are provided for
+   receiver-side handling on unknown PCF types.
 
-              Figure 4: PLUS extended header with 1-byte PCF
+   If a sender requests information from a path, these are generally
+   used to expose information about the traffic for measurement or
+   diagnostic purposes.  These signals generally take the form of
+   accumulators: initialized to some value by the sender, and subject to
+   some aggregation function by each on-path device that understands
+   them.  In any case, the information sent and received is to be
+   treated as advisory only, given its integrity cannot be checked.
 
+   A PLUS receiver that receives a PLUS packet with an extended header
+   and an unknown PCF type where the integrity indication is smaller
+   than 11, MUST feed the non-integrity-protected part of the PCF value
+   field back to the sender, using an encrypted feedback channel
+   provided by the upper layer protocol.  The sender usually consumes
+   this data as it has requested it previously from the path.  The
+   sender SHOULD check the reasonability of the received information, as
+   follows:
 
+   o  If the information was intended to be consumed by the receiver
+      instead of the sender, reflecting the receiver indicates by
+      reflecting this information that the PFC is unknown.
 
+   o  If the value field is unchanged from its initial value, this may
+      indicate that there is no path element on the current path that
+      supports the requested PCF.  However, as the path can change, a
+      PLUS sender might re-try to requested the information at a later
+      point of time or if any indication is received that the path might
+      have changed.
 
+   o  If the PCF value field has an invalid or unreasonable value
+      regarding the requested PCF type, this may be an indication that
+      the scratch space is misused, and the sender SHOULD NOT use this
+      extended header PCF on this path anymore.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+   The PCF types 0x00 and 0xff are used for special purposes. 0x00
+   indicates that another 1-byte type field is followed (before the
+   length and integrity indication) to provide future extensibility.
+   The type 0xff indicates that that PLUS payload data follows (without
+   a PDF length and integrity indication).  The semantics of this PLUS
+   payload are not specified in this revision of this document but e.g.
+   can be used to carry ICMP messages over PLUS.
 
 
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 11]
+
+
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 11]
 
 Internet-Draft                  PLUS Spec                     March 2017
 
 
-     3                   2                   1
-   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-   +------------------------------+-------------------------------+
-   |       UDP source port        |      UDP destination port     |
-   +------------------------------+-------------------------------+
-   |       UDP length             |      UDP checksum             |
-   +------------------------------+-----------------------+-+-+-+-+
-   |                            magic                     |L|R|S|1|
-   +------------------------------------------------------+-+-+-+-+
-   |                                                              |
-   +-             connection/association token CAT               -+
-   |                                                              |
-   +--------------------------------------------------------------+
-   |                 packet serial number  PSN                    |
-   +--------------------------------------------------------------+
-   |                 packet serial echo    PSE                    |
-   +---+---+-------+---------------+------------------------------+
-   | C | 2 | Type  |   PCF value   |                              /
-   +---+---+-------+---------------+                              \
-   \                                                              /
-   /         transport protocol header/payload (encrypted)        \
-   \                                                              /
-
-              Figure 5: PLUS extended header with 3-byte PCF
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 12]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
-     3                   2                   1
-   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-   +------------------------------+-------------------------------+
-   |       UDP source port        |      UDP destination port     |
-   +------------------------------+-------------------------------+
-   |       UDP length             |      UDP checksum             |
-   +------------------------------+-----------------------+-+-+-+-+
-   |                            magic                     |L|R|S|1|
-   +------------------------------------------------------+-+-+-+-+
-   |                                                              |
-   +-             connection/association token CAT               -+
-   |                                                              |
-   +--------------------------------------------------------------+
-   |                 packet serial number  PSN                    |
-   +--------------------------------------------------------------+
-   |                 packet serial echo    PSE                    |
-   +---+---+-------+---------------+------------------------------+
-   | C | 3 | Type  |   PCF length  |                              /
-   +---+---+-------+---------------+      PCF value (varlen)      \
-   \                                                              /
-   +--------------------------------------------------------------+
-   \                                                              /
-   /         transport protocol header/payload (encrypted)        \
-   \                                                              /
-
-          Figure 6: PLUS extended header with variable-length PCF
-
-   Sender to Path signals are generally used to expose information about
-   the traffic for measurement or diagnostic purposes.  Path to Receiver
-   signals generally take the form of accumulators: initialized to some
-   value by the sender, and subject to some aggregation function by each
-   on-path device that understands them.  In any case, the information
-   sent and received is to be treated as advisory only.
-
-   Note that since C codepoints 00 and 01 imply identical treatment for
-   zero-length (L codepoint 00) PCF values, both (i.e., type bytes 0x00
-   - 0x0f and 0x40 - 0x4f) are used for sender-to-path packet marking.
+   If the length field is zero, the integrity indication field is not
+   specified and reserved for future use.  It MUST be set to zero and
+   ignored by the receiver.
 
 3.1.  Measurement and Diagnostics using the Extended Header
 
-   We have identified the following sender to path signals as
-   potentially useful for measurement and diagnostic purposes.  These
-   signals are advisory only, and should not be presumed by either the
-   endpoints or devices along the path to affect forwarding behavior.
+   We have identified the following signals that can be exposed by the
+   sender as potentially useful for measurement and diagnostic purposes.
+   These signals are advisory only, and should not be presumed by either
+   the endpoints or devices along the path to affect forwarding
+   behavior.  Details of type and encoding for these information
 
-   o  Packet number echo delta time (Type 0x21, 3-byte sender to path)
-      Exposes the interval between the receipt of the packet whose
-      number appears in the PSE and the transmission of this packet, as
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 13]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
-      in section 4.1.2 of [IPIM].  Together with analysis of the PSN and
-      PSE sequence, this allows high-precision RTT estimation.  The
-      encoding of this field is TBD.
+   o  Packet number echo delta time.  Exposes the interval between the
+      receipt of the packet whose number appears in the PSE and the
+      transmission of this packet, as in section 4.1.2 of [IPIM].
+      Together with analysis of the PSN and PSE sequence, this allows
+      high-precision RTT estimation.  The encoding of this field is TBD.
 
    o  Timestamp (Type 0x22, 3-byte sender to path).  Similar to TCP
       timestamps in [RFC7323], allows constant-rate clock exposure to
@@ -741,11 +643,18 @@ Internet-Draft                  PLUS Spec                     March 2017
       properties of the PSN and PSE values in the Basic Header.
       [EDITOR'S NOTE: is this useful enough to keep?]
 
-   o  Timestamp Echo (Type 0x23, 3-byte sender to path).  Echo of the
-      last received timestamp, as above.  [EDITOR'S NOTE: is this useful
-      enough to keep?]
+   o  Timestamp Echo.  Echo of the last received timestamp, as above.
+      [EDITOR'S NOTE: as above, is this useful enough to keep?]
 
-   We have identified the following path to receiver signals as
+   o  Congestion Exposure.  The sender exposes the number of observed
+      losses and ECN marks [RFC3168].  The path observes the information
+      over time and derive information about the current whole-path
+      congestion, as currently provided by counting retransmission on
+      TCP, the RTCP Extended Report (XR) block for periodic ECN feedback
+      [RFC6679], or ConEx for IPv6 [RFC7837].  The encoding of this
+      field is TBD.
+
+   We have identified the following signals for request from the path as
    potentially useful.  Note that accumulated values for use at the
    sender must be fed back to the sender by the overlying transport, and
    that the presence of non-PLUS aware devices on path at breaks in MTU
@@ -753,60 +662,90 @@ Internet-Draft                  PLUS Spec                     March 2017
    processes for measurement and discovery of the accumulated values at
    the sender.
 
-   o  State timeout accumulator (Type 0x51, 1-byte path to receiver):
-      This signal allows measurement of timeouts from PLUS-aware
-      devices.  It is initialized to a maximum ("no information") value
-      by the sender.  A PLUS-aware forwarding device on path receiving
-      this value fills in the minimum of the received value and the
-      configured timeout for the flow's present state into this field.
-      The encoding of this field is TBD.
-
-   o  Rate limit accumulator (Type 0x52, 1-byte path to receiver): This
-      signal allows exposure of rate limiting along the path.  It is
-      initialized to a maximum ("no information") value by the sender.
-      A PLUS-aware forwarding device on path receiving this value fills
-      in the minimum of the received value and the rate limit to which
-      this flow is subject into this field.  The encoding of this field
-      is TBD.
-
-   o  MTU accumulator (Type 0x61, 3-byte path to receiver): This signal
-      allows measurement of MTU information from PLUS-aware devices.
-      The sender sets the initial value to the sender's MTU.  A PLUS-
-      aware forwarding device on path receiving this value fills in the
-      minimum of the received value and the MTU of the next hop, in
-      bytes into this field.  The information, when fed back to the
-      sender, can be used as a hint for a running PLPMTUD [RFC4821]
-      process.
+   o  State timeout accumulator: This signal allows measurement of
+      timeouts from PLUS-aware devices.  It is initialized to a maximum
+      ("no information") value by the sender.  A PLUS-aware forwarding
+      device on path receiving this value fills in the minimum of the
 
 
 
-
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 14]
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 12]
 
 Internet-Draft                  PLUS Spec                     March 2017
 
 
-   o  Trace accumulator (Type 0x71, varlen path to receiver).  This
-      signal allows exposure of a trace of PLUS-aware devices on path,
-      similar to the Path Changes mechanism in section 4.3 of [IPIM].
-      The sender initializes the value to a value chosen randomly for
-      the flow; all packets in the flow using path trace accumulator
-      must use the same initial value.  A PLUS-aware forwarding device
-      on path receiving this value fills in the result of XORing the
-      received value with a randomly chosen device identifier, which it
-      must use for all path trace accumulator signals it participates
-      in.  Packets traversing the same set of PLUS-aware forwarding
-      devices in the same flow therefore arrive at the receiver with the
-      same accumulated value, and changes to the set of devices on path
-      can be detected by the receiver.
+      received value and the configured timeout for the flow's present
+      state into this field.  The encoding of this field is TBD.
 
-4.  IANA Considerations
+   o  Rate limit accumulator: This signal allows exposure of rate
+      limiting along the path.  It is initialized to a maximum ("no
+      information") value by the sender.  A PLUS-aware forwarding device
+      on path receiving this value fills in the minimum of the received
+      value and the rate limit to which this flow is subject into this
+      field.  The encoding of this field is TBD.
+
+   o  MTU accumulator: This signal allows measurement of MTU information
+      from PLUS-aware devices.  The sender sets the initial value to the
+      sender's MTU.  A PLUS-aware forwarding device on path receiving
+      this value fills in the minimum of the received value and the MTU
+      of the next hop, in bytes into this field.  The information, when
+      fed back to the sender, can be used as a hint for a running
+      PLPMTUD [RFC4821] process.
+
+   o  Trace accumulator.  This signal allows exposure of a trace of
+      PLUS-aware devices on path, similar to the Path Changes mechanism
+      in section 4.3 of [IPIM].  The sender initializes the value to a
+      value chosen randomly for the flow; all packets in the flow using
+      path trace accumulator must use the same initial value.  A PLUS-
+      aware forwarding device on path receiving this value fills in the
+      result of XORing the received value with a randomly chosen device
+      identifier, which it must use for all path trace accumulator
+      signals it participates in.  Packets traversing the same set of
+      PLUS-aware forwarding devices in the same flow therefore arrive at
+      the receiver with the same accumulated value, and changes to the
+      set of devices on path can be detected by the receiver.
+
+4.  Implementation and Deployment Considerations
+
+   Here we discuss considerations for the implementation of overlying
+   transports on PLUS, and their deployment in the Internet
+
+4.1.  Interface to Overlying Transport
+
+   [EDITOR'S NOTE: Since the overlying transport is responsible for
+   providing the cryptographic context used for integrity protection and
+   feedback, and may be responsible for feedback as well, the
+   "northbound" interface needs to be concretely specified in a future
+   revision of this document.]
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 13]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
+4.2.  Discovery
+
+   [EDITOR'S NOTE: Discovery is currently explicitly out of band.
+   Should there be a way for a PLUS-aware overlying transport to
+   discover whether its peer wants to use a PLUS- or non-PLUS variant of
+   the transport?  This is a specific case of the generalized multi-
+   transport discovery and negotiation problem, so whatever happens here
+   should be interoperable with deployed/deployable approaches.]
+
+5.  IANA Considerations
 
    This document has no actions for IANA.  Path communication field
    types and PLUS magic numbers may be moved to a Standards Action
    registry in a future revision.
 
-5.  Security Considerations
+6.  Security Considerations
 
    This document describes the PLUS Basic and Extended Headers, and the
    protocol they support.  This protocol can be used to expose
@@ -820,9 +759,8 @@ Internet-Draft                  PLUS Spec                     March 2017
    with an encrypted overlying transport, the PLUS Basic and Extended
    Headers are integrity-protected to prevent manipulation on-path of
    any value except Path to Receiver values; this integrity protection
-   prevents Path to Receiver values from being injected without explicit
-   sender involvement, or from being stripped from the PLUS Extended
-   Header.
+   prevents path elements from injecting values without explicit sender
+   involvement, or from being stripped from the PLUS Extended Header.
 
    The CAT and PSE described in Section 2 taken together, provide
    entropy to prevent on-path devices from being driven into incorrect
@@ -831,18 +769,7 @@ Internet-Draft                  PLUS Spec                     March 2017
    forge traffic on both of the middlebox's interfaces to drive a
    middlebox to inappropriately drop state for a flow.
 
-
-
-
-
-
-
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 15]
-
-Internet-Draft                  PLUS Spec                     March 2017
-
-
-6.  Acknowledgments
+7.  Acknowledgments
 
    This work is partially supported by the European Commission under
    Horizon 2020 grant agreement no. 688421 Measurement and Architecture
@@ -850,10 +777,32 @@ Internet-Draft                  PLUS Spec                     March 2017
    for Education, Research, and Innovation under contract no. 15.0268.
    This support does not imply endorsement.  Thanks to Ted Hardie, Joe
    Hildebrand, Mark Nottingham, and the participants of the PLUS BoF at
+
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 14]
+
+Internet-Draft                  PLUS Spec                     March 2017
+
+
    IETF 96 in Berlin for input leading to this design; and to Gorry
    Fairhurst for the detailed review.
 
-7.  Informative References
+8.  References
+
+8.1.  Normative References
+
+   [RFC0768]  Postel, J., "User Datagram Protocol", STD 6, RFC 768,
+              DOI 10.17487/RFC0768, August 1980,
+              <http://www.rfc-editor.org/info/rfc768>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <http://www.rfc-editor.org/info/rfc2119>.
+
+8.2.  Informative References
 
    [I-D.hardie-path-signals]
               Hardie, T., "Path signals", draft-hardie-path-signals-00
@@ -879,10 +828,6 @@ Internet-Draft                  PLUS Spec                     March 2017
               Measurability in Protocol Design (arXiv preprint
               1612.02902)", December 2016.
 
-   [RFC0793]  Postel, J., "Transmission Control Protocol", STD 7,
-              RFC 793, DOI 10.17487/RFC0793, September 1981,
-              <http://www.rfc-editor.org/info/rfc793>.
-
    [RFC2474]  Nichols, K., Blake, S., Baker, F., and D. Black,
               "Definition of the Differentiated Services Field (DS
               Field) in the IPv4 and IPv6 Headers", RFC 2474,
@@ -892,15 +837,24 @@ Internet-Draft                  PLUS Spec                     March 2017
 
 
 
-
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 16]
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 15]
 
 Internet-Draft                  PLUS Spec                     March 2017
 
 
+   [RFC3168]  Ramakrishnan, K., Floyd, S., and D. Black, "The Addition
+              of Explicit Congestion Notification (ECN) to IP",
+              RFC 3168, DOI 10.17487/RFC3168, September 2001,
+              <http://www.rfc-editor.org/info/rfc3168>.
+
    [RFC4821]  Mathis, M. and J. Heffner, "Packetization Layer Path MTU
               Discovery", RFC 4821, DOI 10.17487/RFC4821, March 2007,
               <http://www.rfc-editor.org/info/rfc4821>.
+
+   [RFC6679]  Westerlund, M., Johansson, I., Perkins, C., O'Hanlon, P.,
+              and K. Carlberg, "Explicit Congestion Notification (ECN)
+              for RTP over UDP", RFC 6679, DOI 10.17487/RFC6679, August
+              2012, <http://www.rfc-editor.org/info/rfc6679>.
 
    [RFC7323]  Borman, D., Braden, B., Jacobson, V., and R.
               Scheffenegger, Ed., "TCP Extensions for High Performance",
@@ -911,6 +865,11 @@ Internet-Draft                  PLUS Spec                     March 2017
               Thomson, "Session Traversal Utilities for NAT (STUN) Usage
               for Consent Freshness", RFC 7675, DOI 10.17487/RFC7675,
               October 2015, <http://www.rfc-editor.org/info/rfc7675>.
+
+   [RFC7837]  Krishnan, S., Kuehlewind, M., Briscoe, B., and C. Ralli,
+              "IPv6 Destination Option for Congestion Exposure (ConEx)",
+              RFC 7837, DOI 10.17487/RFC7837, May 2016,
+              <http://www.rfc-editor.org/info/rfc7837>.
 
    [RFC8035]  Holmberg, C., "Session Description Protocol (SDP) Offer/
               Answer Clarifications for RTP/RTCP Multiplexing",
@@ -926,6 +885,17 @@ Authors' Addresses
    Switzerland
 
    Email: ietf@trammell.ch
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 16]
+
+Internet-Draft                  PLUS Spec                     March 2017
 
 
    Mirja Kuehlewind
@@ -949,4 +919,34 @@ Authors' Addresses
 
 
 
-Trammell & Kuehlewind   Expires September 9, 2017              [Page 17]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trammell & Kuehlewind  Expires September 14, 2017              [Page 17]
